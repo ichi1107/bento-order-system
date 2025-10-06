@@ -4,14 +4,15 @@ class CustomerOrdersPage {
     constructor() {
         this.orders = [];
         this.filteredOrders = [];
-        this.currentPage = 1;
-        this.perPage = 10;
         
         this.initializePage();
     }
 
     async initializePage() {
-        // 認証チェック
+        // 認証チェック - トークンがない場合はログインページへリダイレクト
+        if (!Auth.requireAuth()) return;
+        
+        // お客様専用ページなので、roleチェック
         if (!Auth.requireRole('customer')) return;
         
         // ユーザー情報を表示
@@ -32,216 +33,197 @@ class CustomerOrdersPage {
     }
 
     setupEventListeners() {
+        // ログアウトボタン
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => Auth.logout());
+        }
+
         // フィルターイベント
         const statusFilter = document.getElementById('statusFilter');
         if (statusFilter) {
             statusFilter.addEventListener('change', () => this.applyFilters());
         }
+
+        const dateFilter = document.getElementById('dateFilter');
+        if (dateFilter) {
+            dateFilter.addEventListener('change', () => this.applyFilters());
+        }
     }
 
     async loadOrders() {
         try {
+            // ローディング表示
             this.showLoading();
             
-            const response = await ApiClient.get('/customer/orders', {
-                per_page: 100 // 全注文を取得
-            });
+            // APIから注文履歴を取得
+            const response = await ApiClient.get('/customer/orders');
             
             if (!response || !response.orders) {
                 throw new Error('注文データの形式が正しくありません');
             }
             
-            this.orders = response.orders;
+            // 注文を新しい順にソート
+            this.orders = response.orders.sort((a, b) => {
+                return new Date(b.ordered_at) - new Date(a.ordered_at);
+            });
+            
             this.filteredOrders = [...this.orders];
             
+            // ローディングを非表示
+            this.hideLoading();
+            
+            // データが0件の場合は空メッセージを表示
             if (this.orders.length === 0) {
                 this.showEmptyMessage();
             } else {
+                // フィルターを表示
+                this.showFilters();
+                // 注文リストを描画
                 this.renderOrders();
             }
             
         } catch (error) {
             console.error('Failed to load orders:', error);
             
+            // ローディングを非表示
+            this.hideLoading();
+            
             let errorMessage = '注文履歴の読み込みに失敗しました';
-            if (error.message.includes('401')) {
+            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
                 errorMessage = '認証が切れました。再度ログインしてください。';
                 setTimeout(() => Auth.logout(), 2000);
             }
             
-            this.showError(errorMessage);
             UI.showAlert(errorMessage, 'danger');
         }
     }
 
     applyFilters() {
         const statusFilter = document.getElementById('statusFilter')?.value || '';
+        const dateFilter = document.getElementById('dateFilter')?.value || '';
         
         this.filteredOrders = this.orders.filter(order => {
-            return !statusFilter || order.status === statusFilter;
+            // ステータスフィルター
+            if (statusFilter && order.status !== statusFilter) {
+                return false;
+            }
+            
+            // 日付フィルター
+            if (dateFilter) {
+                const orderDate = new Date(order.ordered_at).toISOString().split('T')[0];
+                if (orderDate !== dateFilter) {
+                    return false;
+                }
+            }
+            
+            return true;
         });
 
-        this.currentPage = 1;
         this.renderOrders();
     }
 
     renderOrders() {
-        const container = document.getElementById('ordersContainer');
+        const container = document.getElementById('ordersList');
         if (!container) return;
 
         if (this.filteredOrders.length === 0) {
-            this.showEmptyState(container);
+            container.innerHTML = `
+                <div class="empty-message">
+                    <p>該当する注文がありません。</p>
+                </div>
+            `;
             return;
         }
 
-        // ページネーション
-        const startIndex = (this.currentPage - 1) * this.perPage;
-        const endIndex = startIndex + this.perPage;
-        const currentOrders = this.filteredOrders.slice(startIndex, endIndex);
-
-        // 注文カードを生成
-        container.innerHTML = currentOrders.map(order => this.createOrderCard(order)).join('');
-
-        // ページネーション
-        this.setupPagination();
+        // 注文カードを生成して追加
+        container.innerHTML = this.filteredOrders
+            .map(order => this.createOrderCard(order))
+            .join('');
     }
 
     createOrderCard(order) {
-        const statusBadge = UI.createStatusBadge(order.status);
-        const orderDate = UI.formatDate(order.ordered_at);
+        const statusText = this.getStatusText(order.status);
+        const statusClass = `status-${order.status}`;
+        const orderDate = this.formatDateTime(order.ordered_at);
         
         return `
-            <div class="order-card">
+            <div class="order-item">
                 <div class="order-header">
-                    <div class="order-info">
-                        <h3 class="order-id">注文 #${order.id}</h3>
-                        <div class="order-date">${orderDate}</div>
-                    </div>
-                    <div class="order-status">
-                        ${statusBadge.outerHTML}
-                    </div>
+                    <span class="order-id">#${order.id}</span>
+                    <span class="order-status ${statusClass}">${statusText}</span>
+                    <span class="order-date">${orderDate}</span>
                 </div>
-                <div class="order-content">
-                    <div class="order-menu">
-                        <img src="${order.menu.image_url}" alt="${order.menu.name}" class="order-menu-image"
-                             onerror="this.src='https://via.placeholder.com/80x60?text=No+Image'">
-                        <div class="order-menu-details">
-                            <div class="menu-name">${this.escapeHtml(order.menu.name)}</div>
-                            <div class="menu-price">${UI.formatPrice(order.menu.price)} × ${order.quantity}個</div>
-                        </div>
+                <div class="order-details">
+                    <div class="order-items">
+                        <p>${this.escapeHtml(order.menu_name)} × ${order.quantity}</p>
+                        ${order.notes ? `<p class="order-notes-text">備考: ${this.escapeHtml(order.notes)}</p>` : ''}
                     </div>
                     <div class="order-total">
-                        <div class="total-price">${UI.formatPrice(order.total_price)}</div>
+                        <strong>合計: ${this.formatPrice(order.total_price)}</strong>
                     </div>
-                </div>
-                ${order.notes ? `
-                    <div class="order-notes">
-                        <strong>備考:</strong> ${this.escapeHtml(order.notes)}
-                    </div>
-                ` : ''}
-                <div class="order-actions">
-                    ${order.status === 'pending' ? `
-                        <button type="button" class="btn btn-sm btn-danger" onclick="customerOrdersPage.cancelOrder(${order.id})">
-                            キャンセル
-                        </button>
-                    ` : ''}
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="customerOrdersPage.reorder(${order.menu.id})">
-                        再注文
-                    </button>
                 </div>
             </div>
         `;
-    }
-
-    async cancelOrder(orderId) {
-        if (!confirm('この注文をキャンセルしますか？')) return;
-
-        try {
-            await ApiClient.put(`/customer/orders/${orderId}/cancel`);
-            UI.showAlert('注文をキャンセルしました', 'success');
-            await this.loadOrders();
-        } catch (error) {
-            console.error('Cancel order failed:', error);
-            UI.showAlert('注文のキャンセルに失敗しました', 'danger');
-        }
-    }
-
-    reorder(menuId) {
-        // メニューページに移動
-        window.location.href = `/customer/home#menu-${menuId}`;
-    }
-
-    setupPagination() {
-        const totalPages = Math.ceil(this.filteredOrders.length / this.perPage);
-        const paginationContainer = document.getElementById('pagination');
-        
-        if (paginationContainer) {
-            Pagination.create(paginationContainer, this.currentPage, totalPages, (page) => {
-                this.currentPage = page;
-                this.renderOrders();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
-        }
     }
 
     showLoading() {
-        const container = document.getElementById('ordersContainer');
-        if (!container) return;
-
-        container.innerHTML = `
-            <div class="loading-container">
-                <div class="loading"></div>
-                <p>注文履歴を読み込み中...</p>
-            </div>
-        `;
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'block';
+        }
     }
 
-    showError(message) {
-        const container = document.getElementById('ordersContainer');
-        if (!container) return;
-
-        container.innerHTML = `
-            <div class="error-container">
-                <div class="error-icon">⚠️</div>
-                <h3>エラーが発生しました</h3>
-                <p>${message}</p>
-                <button type="button" class="btn btn-primary" onclick="location.reload()">
-                    再読み込み
-                </button>
-            </div>
-        `;
+    hideLoading() {
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
     }
 
     showEmptyMessage() {
-        const container = document.getElementById('ordersContainer');
-        if (!container) return;
-
-        container.innerHTML = `
-            <div class="empty-container">
-                <div class="empty-icon">📋</div>
-                <h3>注文履歴がありません</h3>
-                <p>まだ注文をされていません。</p>
-                <a href="/customer/home" class="btn btn-primary">
-                    メニューを見る
-                </a>
-            </div>
-        `;
+        const emptyMessage = document.getElementById('emptyMessage');
+        if (emptyMessage) {
+            emptyMessage.style.display = 'block';
+        }
     }
 
-    showEmptyState(container) {
-        container.innerHTML = `
-            <div class="empty-container">
-                <div class="empty-icon">🔍</div>
-                <h3>該当する注文がありません</h3>
-                <p>検索条件を変更してみてください。</p>
-                <button type="button" class="btn btn-secondary" onclick="customerOrdersPage.applyFilters()">
-                    フィルターをクリア
-                </button>
-            </div>
-        `;
+    showFilters() {
+        const ordersFilters = document.getElementById('ordersFilters');
+        if (ordersFilters) {
+            ordersFilters.style.display = 'flex';
+        }
+    }
+
+    getStatusText(status) {
+        const statusMap = {
+            'pending': '注文中',
+            'confirmed': '確認済み',
+            'preparing': '準備中',
+            'ready': '受取準備完了',
+            'completed': '完了',
+            'cancelled': 'キャンセル'
+        };
+        return statusMap[status] || status;
+    }
+
+    formatPrice(price) {
+        return `¥${price.toLocaleString('ja-JP')}`;
+    }
+
+    formatDateTime(dateTimeString) {
+        const date = new Date(dateTimeString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}/${month}/${day} ${hours}:${minutes}`;
     }
 
     escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;

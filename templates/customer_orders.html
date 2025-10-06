@@ -14,7 +14,8 @@
             <nav class="nav">
                 <a href="/customer/home" class="nav-link">ホーム</a>
                 <a href="/customer/orders" class="nav-link active">注文履歴</a>
-                <a href="/logout" class="nav-link">ログアウト</a>
+                <span id="userInfo"></span>
+                <button id="logoutBtn" class="btn btn-sm btn-secondary">ログアウト</button>
             </nav>
         </header>
 
@@ -25,7 +26,19 @@
             </section>
 
             <section class="orders-section">
-                <div class="orders-filters">
+                <!-- ローディングインジケーター -->
+                <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>読み込み中...</p>
+                </div>
+
+                <!-- 注文が一件もない場合のメッセージ -->
+                <div id="emptyMessage" class="empty-message" style="display: none;">
+                    <p>ご注文履歴はありません。</p>
+                </div>
+
+                <!-- フィルター -->
+                <div class="orders-filters" id="ordersFilters" style="display: none;">
                     <select id="statusFilter" class="filter-select">
                         <option value="">全ての注文</option>
                         <option value="pending">注文中</option>
@@ -38,30 +51,9 @@
                     <input type="date" id="dateFilter" class="filter-date">
                 </div>
 
+                <!-- 注文リストコンテナ -->
                 <div id="ordersList" class="orders-list">
-                    <!-- 注文履歴がここに動的に表示されます -->
-                    <div class="order-item">
-                        <div class="order-header">
-                            <span class="order-id">#12345</span>
-                            <span class="order-status status-confirmed">確認済み</span>
-                            <span class="order-date">2025/10/05 12:30</span>
-                        </div>
-                        <div class="order-details">
-                            <div class="order-items">
-                                <p>鶏の照り焼き弁当 × 2</p>
-                                <p>ハンバーグ弁当 × 1</p>
-                            </div>
-                            <div class="order-total">
-                                <strong>合計: ¥1,810</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pagination">
-                    <button class="pagination-btn" disabled>前へ</button>
-                    <span class="pagination-info">1 / 1</span>
-                    <button class="pagination-btn" disabled>次へ</button>
+                    <!-- JavaScriptで注文リストがここに描画されます -->
                 </div>
             </section>
         </main>
