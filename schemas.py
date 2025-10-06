@@ -159,6 +159,33 @@ class OrderListResponse(BaseModel):
     total: int
 
 
+class OrderHistoryItem(BaseModel):
+    """注文履歴の項目（メニュー情報を含む）"""
+    id: int
+    quantity: int
+    total_price: int
+    status: str
+    delivery_time: Optional[time]
+    notes: Optional[str]
+    ordered_at: datetime
+    updated_at: datetime
+    
+    # メニュー情報（商品名、画像URL）
+    menu_id: int
+    menu_name: str
+    menu_image_url: Optional[str]
+    menu_price: int
+
+    class Config:
+        from_attributes = True
+
+
+class OrderHistoryResponse(BaseModel):
+    """注文履歴のレスポンス"""
+    orders: List[OrderHistoryItem]
+    total: int
+
+
 class OrderSummary(BaseModel):
     """注文サマリー（ダッシュボード用）"""
     total_orders: int
