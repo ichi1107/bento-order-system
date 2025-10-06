@@ -41,9 +41,9 @@ def insert_initial_data():
         # 2. ユーザーデータ
         print("  - Inserting store staff...")
         store_users = [
-            User(username="admin", email="admin@bento.com", hashed_password=get_password_hash("admin@123"), role="store", full_name="管理者"),
-            User(username="store1", email="store1@bento.com", hashed_password=get_password_hash("password123"), role="store", full_name="佐藤花子"),
-            User(username="store2", email="store2@bento.com", hashed_password=get_password_hash("password123"), role="store", full_name="鈴木一郎")
+            User(username="admin", email="admin@bento.com", hashed_password=get_password_hash("admin123"), role="store", full_name="管理者"),
+            User(username="store1", email="store1@bento.com", hashed_password=get_password_hash("pass123"), role="store", full_name="佐藤花子"),
+            User(username="store2", email="store2@bento.com", hashed_password=get_password_hash("pass123"), role="store", full_name="鈴木一郎")
         ]
         db.add_all(store_users)
         db.commit()
@@ -51,11 +51,11 @@ def insert_initial_data():
         
         print("  - Inserting customers...")
         customers = [
-            User(username="customer1", email="customer1@example.com", hashed_password=get_password_hash("password123"), role="customer", full_name="山田太郎"),
-            User(username="customer2", email="customer2@example.com", hashed_password=get_password_hash("password123"), role="customer", full_name="田中美咲"),
-            User(username="customer3", email="customer3@example.com", hashed_password=get_password_hash("password123"), role="customer", full_name="伊藤健太"),
-            User(username="customer4", email="customer4@example.com", hashed_password=get_password_hash("password123"), role="customer", full_name="高橋さくら"),
-            User(username="customer5", email="customer5@example.com", hashed_password=get_password_hash("password123"), role="customer", full_name="渡辺健二")
+            User(username="customer1", email="customer1@example.com", hashed_password=get_password_hash("pass123"), role="customer", full_name="山田太郎"),
+            User(username="customer2", email="customer2@example.com", hashed_password=get_password_hash("pass123"), role="customer", full_name="田中美咲"),
+            User(username="customer3", email="customer3@example.com", hashed_password=get_password_hash("pass123"), role="customer", full_name="伊藤健太"),
+            User(username="customer4", email="customer4@example.com", hashed_password=get_password_hash("pass123"), role="customer", full_name="高橋さくら"),
+            User(username="customer5", email="customer5@example.com", hashed_password=get_password_hash("pass123"), role="customer", full_name="渡辺健二")
         ]
         db.add_all(customers)
         db.commit()
