@@ -5,11 +5,11 @@ JWT トークンベースの認証とパスワードハッシュ化機能
 """
 
 import os
+import hashlib
 from datetime import datetime, timedelta
 from typing import Optional
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from dotenv import load_dotenv
 
 # 環境変数を読み込み
@@ -19,9 +19,6 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
-
-# パスワードハッシュ化用コンテキスト
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -35,7 +32,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: パスワードが一致する場合True
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
 
 
 def get_password_hash(password: str) -> str:
@@ -48,7 +45,7 @@ def get_password_hash(password: str) -> str:
     Returns:
         str: ハッシュ化されたパスワード
     """
-    return pwd_context.hash(password)
+    return hashlib.sha256(password.encode()).hexdigest()
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

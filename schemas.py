@@ -153,6 +153,30 @@ class OrderResponse(BaseModel):
         from_attributes = True
 
 
+class OrderHistoryItem(BaseModel):
+    """注文履歴項目（フロントエンド表示用の軽量版）"""
+    id: int
+    quantity: int
+    total_price: int
+    status: str
+    delivery_time: Optional[time]
+    notes: Optional[str]
+    ordered_at: datetime
+    
+    # 関連メニュー情報（必要な項目のみ）
+    menu_name: str
+    menu_image_url: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class OrderHistoryResponse(BaseModel):
+    """注文履歴のレスポンス"""
+    orders: List[OrderHistoryItem]
+    total: int
+
+
 class OrderListResponse(BaseModel):
     """注文一覧のレスポンス"""
     orders: List[OrderResponse]
