@@ -8,68 +8,60 @@
     <link rel="stylesheet" href="/static/css/customer_orders.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1>🍱 弁当注文システム</h1>
-            <nav class="nav">
-                <a href="/customer/home" class="nav-link">ホーム</a>
-                <a href="/customer/orders" class="nav-link active">注文履歴</a>
-                <a href="/logout" class="nav-link">ログアウト</a>
-            </nav>
-        </header>
-
-        <main class="main">
-            <section class="page-header">
-                <h2>📋 注文履歴</h2>
-                <p>過去の注文履歴を確認できます</p>
-            </section>
-
-            <section class="orders-section">
-                <div class="orders-filters">
-                    <select id="statusFilter" class="filter-select">
-                        <option value="">全ての注文</option>
-                        <option value="pending">注文中</option>
-                        <option value="confirmed">確認済み</option>
-                        <option value="preparing">準備中</option>
-                        <option value="ready">受取準備完了</option>
-                        <option value="completed">完了</option>
-                        <option value="cancelled">キャンセル</option>
-                    </select>
-                    <input type="date" id="dateFilter" class="filter-date">
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/customer/home" class="logo">🍱 弁当注文システム</a>
+                <nav>
+                    <ul class="nav-links">
+                        <li><a href="/customer/home">メニュー</a></li>
+                        <li><a href="/customer/orders" class="active">注文履歴</a></li>
+                    </ul>
+                </nav>
+                <div class="user-info">
+                    <span id="userInfo"></span>
+                    <button id="logoutBtn" class="btn btn-sm btn-secondary">ログアウト</button>
                 </div>
+            </div>
+        </div>
+    </header>
 
-                <div id="ordersList" class="orders-list">
-                    <!-- 注文履歴がここに動的に表示されます -->
-                    <div class="order-item">
-                        <div class="order-header">
-                            <span class="order-id">#12345</span>
-                            <span class="order-status status-confirmed">確認済み</span>
-                            <span class="order-date">2025/10/05 12:30</span>
-                        </div>
-                        <div class="order-details">
-                            <div class="order-items">
-                                <p>鶏の照り焼き弁当 × 2</p>
-                                <p>ハンバーグ弁当 × 1</p>
-                            </div>
-                            <div class="order-total">
-                                <strong>合計: ¥1,810</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pagination">
-                    <button class="pagination-btn" disabled>前へ</button>
-                    <span class="pagination-info">1 / 1</span>
-                    <button class="pagination-btn" disabled>次へ</button>
-                </div>
-            </section>
-        </main>
-
-        <footer class="footer">
-            <p>&copy; 2025 弁当注文システム</p>
-        </footer>
+    <!-- ページヘッダー -->
+    <div class="page-header">
+        <div class="container">
+            <h1 class="page-title">ご注文履歴</h1>
+            <p class="page-subtitle">過去のご注文を確認できます</p>
+        </div>
     </div>
+
+    <!-- メインコンテンツ -->
+    <main class="main-content">
+        <div class="container">
+            <!-- ローディングインジケーター -->
+            <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                <div class="spinner"></div>
+                <p>読み込み中...</p>
+            </div>
+
+            <!-- 注文が一件もない場合のメッセージ -->
+            <div id="emptyMessage" class="empty-message" style="display: none;">
+                <p>ご注文履歴はありません。</p>
+            </div>
+
+            <!-- 注文リストコンテナ -->
+            <div id="ordersList" class="orders-list">
+                <!-- JavaScriptで注文リストがここに描画されます -->
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 弁当注文システム</p>
+        </div>
+    </footer>
 
     <script src="/static/js/common.js"></script>
     <script src="/static/js/customer_orders.js"></script>
