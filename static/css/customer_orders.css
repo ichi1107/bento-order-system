@@ -25,46 +25,6 @@
     padding: 2rem 0;
 }
 
-/* ヘッダー関連 */
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 0;
-    background: #007bff;
-    color: white;
-    margin-bottom: 0;
-}
-
-.header h1 {
-    margin: 0;
-    font-size: 1.5rem;
-}
-
-.nav {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.nav-link {
-    color: white;
-    text-decoration: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    transition: background-color 0.3s;
-}
-
-.nav-link:hover,
-.nav-link.active {
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
-#userInfo {
-    color: white;
-    margin-left: 1rem;
-}
-
 /* ローディングインジケーター */
 .loading-indicator {
     text-align: center;
@@ -134,6 +94,13 @@
     font-size: 1rem;
     min-width: 200px;
     transition: border-color 0.3s;
+}
+
+.filter-select:focus,
+.filter-date:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
 }
 
 .filter-select:focus,
@@ -252,13 +219,6 @@
     border-bottom: none;
 }
 
-.order-notes-text {
-    font-size: 0.875rem;
-    color: #6c757d;
-    font-style: italic;
-    padding: 0.25rem 0 !important;
-}
-
 .order-total {
     text-align: right;
     padding-top: 1rem;
@@ -268,6 +228,42 @@
 .order-total strong {
     font-size: 1.25rem;
     color: #007bff;
+}
+
+/* ページネーション */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1rem 0;
+}
+
+.pagination-btn {
+    padding: 0.5rem 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-weight: 500;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+.pagination-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.pagination-info {
+    color: #495057;
+    font-weight: 500;
 }
 
 /* レスポンシブデザイン - タブレット */
@@ -306,11 +302,6 @@
     
     .order-total strong {
         font-size: 1.1rem;
-    }
-
-    .nav {
-        flex-wrap: wrap;
-        gap: 0.5rem;
     }
 }
 
@@ -376,17 +367,49 @@
     .order-total strong {
         font-size: 1rem;
     }
-
-    .header h1 {
-        font-size: 1.2rem;
+    
+    .pagination {
+        margin-top: 1.5rem;
+        gap: 0.5rem;
     }
-
-    .nav {
-        font-size: 0.85rem;
+    
+    .pagination-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
     }
+    
+    .pagination-info {
+        font-size: 0.9rem;
+    }
+}
 
-    .nav-link {
-        padding: 0.4rem 0.6rem;
+/* ダークモード対応（オプション） */
+@media (prefers-color-scheme: dark) {
+    .order-item {
+        background: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .order-header {
+        background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        border-bottom-color: #4a5568;
+    }
+    
+    .order-id {
+        color: #e2e8f0;
+    }
+    
+    .order-date {
+        color: #cbd5e0;
+    }
+    
+    .order-items p {
+        color: #e2e8f0;
+        border-bottom-color: #4a5568;
+    }
+    
+    .order-total {
+        border-top-color: #4a5568;
     }
 }
 
@@ -409,6 +432,7 @@
 /* プリント用スタイル */
 @media print {
     .orders-filters,
+    .pagination,
     .header,
     .footer {
         display: none;
