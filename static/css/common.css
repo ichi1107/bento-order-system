@@ -69,8 +69,14 @@ body {
     transition: background-color 0.3s;
 }
 
-.nav-links a:hover {
+.nav-links a:hover,
+.nav-links a.active {
     background-color: rgba(255,255,255,0.2);
+}
+
+.nav-links a.active {
+    font-weight: bold;
+    background-color: rgba(255,255,255,0.3);
 }
 
 .user-info {

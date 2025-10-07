@@ -84,7 +84,7 @@ class CustomerMenuPage {
 
     async loadMenus() {
         try {
-            this.showLoading();
+            this.showLoading(true);
             
             const response = await ApiClient.get('/customer/menus', {
                 per_page: 100 // 全メニューを取得
@@ -102,7 +102,8 @@ class CustomerMenuPage {
             if (this.menus.length === 0) {
                 this.showEmptyMessage();
             } else {
-                this.renderMenus();
+                this.renderMenus(false); // 初回ロードはフェード不要
+                this.isInitialLoad = false;
             }
             
         } catch (error) {

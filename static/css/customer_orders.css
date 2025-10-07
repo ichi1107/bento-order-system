@@ -50,12 +50,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-}
-
-.order-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .order-id {
@@ -69,6 +65,7 @@
     color: #6c757d;
 }
 
+/* 注文ステータス */
 .order-status {
     display: flex;
     align-items: center;
@@ -162,6 +159,8 @@
 
 .order-total {
     text-align: right;
+    padding-top: 1rem;
+    border-top: 2px solid #dee2e6;
 }
 
 .total-price {
@@ -323,114 +322,183 @@
 
 .detail-label {
     font-weight: 500;
-    color: #6c757d;
 }
 
-.detail-value {
-    color: #343a40;
-}
-
-/* ローディング状態 */
-.orders-loading {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.order-skeleton {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    overflow: hidden;
-    animation: pulse 1.5s ease-in-out infinite;
-}
-
-.skeleton-header {
-    padding: 1rem 1.5rem;
-    background: #f8f9fa;
-    display: flex;
-    justify-content: space-between;
-}
-
-.skeleton-line {
-    height: 20px;
-    background: #e9ecef;
-    border-radius: 4px;
-}
-
-.skeleton-body {
-    padding: 1.5rem;
-    display: grid;
-    grid-template-columns: 80px 1fr auto;
-    gap: 1rem;
-    align-items: center;
-}
-
-.skeleton-image {
-    width: 80px;
-    height: 80px;
-    background: #e9ecef;
-    border-radius: 8px;
-}
-
-/* レスポンシブ */
+/* レスポンシブデザイン - タブレット */
 @media (max-width: 768px) {
-    .orders-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 1rem;
+    .page-title {
+        font-size: 1.5rem;
     }
     
-    .filter-tabs {
-        flex-wrap: wrap;
+    .page-subtitle {
+        font-size: 1rem;
+    }
+    
+    .orders-filters {
+        flex-direction: column;
+    }
+    
+    .filter-select,
+    .filter-date {
+        width: 100%;
+        min-width: unset;
     }
     
     .order-header {
         flex-direction: column;
-        align-items: stretch;
-        gap: 1rem;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .order-id {
+        font-size: 1rem;
     }
     
     .order-details {
-        grid-template-columns: 1fr;
-        text-align: center;
-        gap: 1.5rem;
+        padding: 1rem;
     }
     
-    .menu-image {
-        margin: 0 auto;
-    }
-    
-    .order-actions {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 1rem;
-    }
-    
-    .action-buttons {
-        justify-content: center;
+    .order-total strong {
+        font-size: 1.1rem;
     }
 }
 
+/* レスポンシブデザイン - スマートフォン */
 @media (max-width: 480px) {
-    .orders-title {
-        font-size: 1.5rem;
+    .page-header {
+        padding: 1.5rem 0;
     }
     
-    .order-card {
-        margin: 0 10px;
-    }
-    
-    .filter-tab {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
-    }
-    
-    .menu-name {
-        font-size: 1.125rem;
-    }
-    
-    .total-price {
+    .page-title {
         font-size: 1.25rem;
+    }
+    
+    .page-subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .orders-filters {
+        padding: 1rem;
+    }
+    
+    .filter-select,
+    .filter-date {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    .order-item {
+        margin: 0 -10px;
+        border-radius: 8px;
+    }
+    
+    .order-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .order-id {
+        font-size: 0.9rem;
+    }
+    
+    .order-date {
+        font-size: 0.75rem;
+    }
+    
+    .order-status {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
+    }
+    
+    .order-details {
+        padding: 0.75rem 1rem;
+    }
+    
+    .order-items p {
+        font-size: 0.9rem;
+        padding: 0.4rem 0;
+    }
+    
+    .order-total {
+        padding-top: 0.75rem;
+    }
+    
+    .order-total strong {
+        font-size: 1rem;
+    }
+    
+    .pagination {
+        margin-top: 1.5rem;
+        gap: 0.5rem;
+    }
+    
+    .pagination-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+    }
+    
+    .pagination-info {
+        font-size: 0.9rem;
+    }
+}
+
+/* ダークモード対応（オプション） */
+@media (prefers-color-scheme: dark) {
+    .order-item {
+        background: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .order-header {
+        background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        border-bottom-color: #4a5568;
+    }
+    
+    .order-id {
+        color: #e2e8f0;
+    }
+    
+    .order-date {
+        color: #cbd5e0;
+    }
+    
+    .order-items p {
+        color: #e2e8f0;
+        border-bottom-color: #4a5568;
+    }
+    
+    .order-total {
+        border-top-color: #4a5568;
+    }
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.order-item {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* プリント用スタイル */
+@media print {
+    .orders-filters,
+    .pagination,
+    .header,
+    .footer {
+        display: none;
+    }
+    
+    .order-item {
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #dee2e6;
     }
 }
