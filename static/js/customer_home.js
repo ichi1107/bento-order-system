@@ -41,7 +41,7 @@ class CustomerMenuPage {
     updateUserInfo() {
         const userInfoElement = document.getElementById('userInfo');
         if (userInfoElement && currentUser) {
-            userInfoElement.textContent = `${currentUser.full_name}さん`;
+            userInfoElement.textContent = `${currentUser.full_name} さん`;
         }
     }
 
