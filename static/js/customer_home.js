@@ -7,6 +7,7 @@ class CustomerMenuPage {
         this.currentPage = 1;
         this.perPage = 12;
         this.orderItems = new Map(); // menuId -> quantity
+        this.isInitialLoad = true; // 初回ロードフラグ
         
         this.initializePage();
     }
@@ -69,7 +70,7 @@ class CustomerMenuPage {
 
     async loadMenus() {
         try {
-            this.showLoading();
+            this.showLoading(true);
             
             const response = await ApiClient.get('/customer/menus', {
                 per_page: 100 // 全メニューを取得
@@ -82,14 +83,19 @@ class CustomerMenuPage {
             this.menus = response.menus;
             this.filteredMenus = [...this.menus];
             
+            this.hideLoading();
+            
             if (this.menus.length === 0) {
                 this.showEmptyMessage();
             } else {
-                this.renderMenus();
+                this.renderMenus(false); // 初回ロードはフェード不要
+                this.isInitialLoad = false;
             }
             
         } catch (error) {
             console.error('Failed to load menus:', error);
+            
+            this.hideLoading();
             
             // 具体的なエラーメッセージを表示
             let errorMessage = 'メニューの読み込みに失敗しました';
@@ -136,7 +142,7 @@ class CustomerMenuPage {
         this.updateResultCount();
     }
 
-    renderMenus() {
+    renderMenus(useFade = true) {
         const container = document.getElementById('menuGrid');
         if (!container) return;
 
@@ -150,6 +156,26 @@ class CustomerMenuPage {
         const endIndex = startIndex + this.perPage;
         const currentMenus = this.filteredMenus.slice(startIndex, endIndex);
 
+        // フェード効果を使う場合
+        if (useFade && !this.isInitialLoad) {
+            requestAnimationFrame(() => {
+                container.style.opacity = '0';
+                
+                setTimeout(() => {
+                    this.updateMenuContent(container, currentMenus);
+                    
+                    requestAnimationFrame(() => {
+                        container.style.opacity = '1';
+                    });
+                }, 100);
+            });
+        } else {
+            // フェード効果なし（初回ロード時）
+            this.updateMenuContent(container, currentMenus);
+        }
+    }
+
+    updateMenuContent(container, currentMenus) {
         // メニューカードを生成
         container.innerHTML = currentMenus.map(menu => this.createMenuCard(menu)).join('');
 
@@ -443,22 +469,15 @@ class CustomerMenuPage {
         }
     }
 
-    showLoading() {
-        const container = document.getElementById('menuGrid');
-        if (!container) return;
+    showLoading(show = true) {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.display = show ? 'flex' : 'none';
+        }
+    }
 
-        const skeletonHtml = Array(6).fill().map(() => `
-            <div class="menu-skeleton">
-                <div class="skeleton-image"></div>
-                <div class="skeleton-content">
-                    <div class="skeleton-line short"></div>
-                    <div class="skeleton-line long"></div>
-                    <div class="skeleton-line short"></div>
-                </div>
-            </div>
-        `).join('');
-
-        container.innerHTML = `<div class="menu-loading">${skeletonHtml}</div>`;
+    hideLoading() {
+        this.showLoading(false);
     }
 
     showError(message) {
