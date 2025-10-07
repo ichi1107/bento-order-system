@@ -135,6 +135,45 @@ class UI {
         };
     }
 
+    /**
+     * ヘッダーのナビゲーションリンクを初期化
+     * customerロールの場合のみ注文履歴リンクを表示
+     */
+    static initializeHeader() {
+        if (!currentUser) return;
+
+        // お客様の場合、注文履歴リンクを表示
+        if (currentUser.role === 'customer') {
+            const navLinks = document.querySelector('.nav-links');
+            if (navLinks) {
+                // 既に注文履歴リンクが存在するか確認
+                const ordersLink = navLinks.querySelector('a[href="/customer/orders"]');
+                if (!ordersLink) {
+                    // 注文履歴リンクを追加
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+                    a.href = '/customer/orders';
+                    a.textContent = '注文履歴';
+                    
+                    // 現在のページがordersの場合はactiveクラスを追加
+                    if (window.location.pathname === '/customer/orders') {
+                        a.classList.add('active');
+                    }
+                    
+                    li.appendChild(a);
+                    navLinks.appendChild(li);
+                }
+            }
+        }
+
+        // ユーザー情報の表示
+        const userInfoElement = document.getElementById('userInfo');
+        if (userInfoElement) {
+            const roleText = currentUser.role === 'customer' ? 'お客様' : '店舗';
+            userInfoElement.textContent = `${currentUser.full_name}さん`;
+        }
+    }
+
     static formatPrice(price) {
         return new Intl.NumberFormat('ja-JP', {
             style: 'currency',
@@ -320,6 +359,9 @@ class Validator {
 
 // 共通イベントリスナーの設定
 document.addEventListener('DOMContentLoaded', function() {
+    // ヘッダーの初期化
+    UI.initializeHeader();
+
     // ログアウトボタンの処理
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
@@ -329,12 +371,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 Auth.logout();
             }
         });
-    }
-
-    // ユーザー情報の表示
-    const userInfoElement = document.getElementById('userInfo');
-    if (userInfoElement && currentUser) {
-        userInfoElement.textContent = `${currentUser.full_name} (${currentUser.role === 'customer' ? 'お客様' : '店舗'})`;
     }
 
     // 現在のページに応じたナビゲーションのアクティブ状態
