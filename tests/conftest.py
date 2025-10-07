@@ -1,0 +1,428 @@
+"""
+pytest設定とフィクスチャ
+
+テスト用のデータベース、クライアント、ユーザーなどを提供
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from main import app
+from database import Base, get_db
+from models import User, Menu, Order
+from auth import get_password_hash
+from datetime import datetime, timedelta
+
+
+# テスト用インメモリデータベース
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture(scope="function")
+def db_session():
+    """
+    テスト用データベースセッションを提供
+    各テストごとに新しいデータベースを作成
+    """
+    Base.metadata.create_all(bind=engine)
+    session = TestingSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+        Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="function")
+def client(db_session):
+    """
+    テスト用FastAPIクライアントを提供
+    """
+    def override_get_db():
+        try:
+            yield db_session
+        finally:
+            pass
+    
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def customer_user_a(db_session):
+    """
+    テスト用顧客ユーザーA
+    """
+    user = User(
+        username="customer_a",
+        email="customer_a@test.com",
+        full_name="テスト顧客A",
+        hashed_password=get_password_hash("password123"),
+        role="customer",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def customer_user_b(db_session):
+    """
+    テスト用顧客ユーザーB
+    """
+    user = User(
+        username="customer_b",
+        email="customer_b@test.com",
+        full_name="テスト顧客B",
+        hashed_password=get_password_hash("password123"),
+        role="customer",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def customer_user_empty(db_session):
+    """
+    注文履歴がないテスト用顧客ユーザー
+    """
+    user = User(
+        username="customer_empty",
+        email="customer_empty@test.com",
+        full_name="テスト顧客(履歴なし)",
+        hashed_password=get_password_hash("password123"),
+        role="customer",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def store_user(db_session):
+    """
+    テスト用店舗ユーザー
+    """
+    user = User(
+        username="store_user",
+        email="store@test.com",
+        full_name="テスト店舗",
+        hashed_password=get_password_hash("password123"),
+        role="store",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from main import app
+from database import Base, get_db
+from models import User, Menu, Order
+from auth import get_password_hash
+from datetime import datetime, timedelta
+
+
+# テスト用インメモリデータベース
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture(scope="function")
+def db_session():
+    """
+    テスト用データベースセッションを提供
+    各テストごとに新しいデータベースを作成
+    """
+    Base.metadata.create_all(bind=engine)
+    session = TestingSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+        Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="function")
+def client(db_session):
+    """
+    テスト用FastAPIクライアントを提供
+    """
+    def override_get_db():
+        try:
+            yield db_session
+        finally:
+            pass
+    
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def customer_user_a(db_session):
+    """
+    テスト用顧客ユーザーA
+    """
+    user = User(
+        username="customer_a",
+        email="customer_a@test.com",
+        full_name="テスト顧客A",
+        hashed_password=get_password_hash("password123"),
+        role="customer",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def customer_user_b(db_session):
+    """
+    テスト用顧客ユーザーB
+    """
+    user = User(
+        username="customer_b",
+        email="customer_b@test.com",
+        full_name="テスト顧客B",
+        hashed_password=get_password_hash("password123"),
+        role="customer",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def customer_user_empty(db_session):
+    """
+    注文履歴がないテスト用顧客ユーザー
+    """
+    user = User(
+        username="customer_empty",
+        email="customer_empty@test.com",
+        full_name="テスト顧客（履歴なし）",
+        hashed_password=get_password_hash("password123"),
+        role="customer",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def test_menu(db_session):
+    """
+    テスト用メニュー
+    """
+    menu = Menu(
+        name="テスト弁当",
+        price=800,
+        description="テスト用の弁当です",
+        image_url="https://example.com/test.jpg",
+        is_available=True
+    )
+    db_session.add(menu)
+    db_session.commit()
+    db_session.refresh(menu)
+    return menu
+
+
+@pytest.fixture
+def test_menu_2(db_session):
+    """
+    テスト用メニュー2
+    """
+    menu = Menu(
+        name="テスト弁当2",
+        price=900,
+        description="テスト用の弁当2です",
+        image_url="https://example.com/test2.jpg",
+        is_available=True
+    )
+    db_session.add(menu)
+    db_session.commit()
+    db_session.refresh(menu)
+    return menu
+
+
+@pytest.fixture
+def test_menu_unavailable(db_session):
+    """
+    在庫切れのテスト用メニュー
+    """
+    menu = Menu(
+        name="在庫切れ弁当",
+        price=1000,
+        description="在庫切れのテスト用弁当です",
+        image_url="https://example.com/unavailable.jpg",
+        is_available=False
+    )
+    db_session.add(menu)
+    db_session.commit()
+    db_session.refresh(menu)
+    return menu
+
+
+@pytest.fixture
+def orders_for_customer_a(db_session, customer_user_a, test_menu, test_menu_2):
+    """
+    顧客Aの注文履歴を作成
+    """
+    # 3つの注文を作成（新しい順にテストするため、異なる日時で作成）
+    orders = []
+    
+    # 注文1（最古）
+    order1 = Order(
+        user_id=customer_user_a.id,
+        menu_id=test_menu.id,
+        quantity=2,
+        total_price=test_menu.price * 2,
+        status="completed",
+        ordered_at=datetime.utcnow() - timedelta(days=2),
+        notes="最初の注文"
+    )
+    db_session.add(order1)
+    orders.append(order1)
+    
+    # 注文2（中間）
+    order2 = Order(
+        user_id=customer_user_a.id,
+        menu_id=test_menu_2.id,
+        quantity=1,
+        total_price=test_menu_2.price * 1,
+        status="confirmed",
+        ordered_at=datetime.utcnow() - timedelta(days=1),
+        notes="2番目の注文"
+    )
+    db_session.add(order2)
+    orders.append(order2)
+    
+    # 注文3（最新）
+    order3 = Order(
+        user_id=customer_user_a.id,
+        menu_id=test_menu.id,
+        quantity=3,
+        total_price=test_menu.price * 3,
+        status="pending",
+        ordered_at=datetime.utcnow(),
+        notes="最新の注文"
+    )
+    db_session.add(order3)
+    orders.append(order3)
+    
+    db_session.commit()
+    for order in orders:
+        db_session.refresh(order)
+    
+    return orders
+
+
+@pytest.fixture
+def orders_for_customer_b(db_session, customer_user_b, test_menu):
+    """
+    顧客Bの注文履歴を作成
+    """
+    orders = []
+    
+    # 注文1
+    order1 = Order(
+        user_id=customer_user_b.id,
+        menu_id=test_menu.id,
+        quantity=1,
+        total_price=test_menu.price * 1,
+        status="pending",
+        ordered_at=datetime.utcnow(),
+        notes="顧客Bの注文"
+    )
+    db_session.add(order1)
+    orders.append(order1)
+    
+    db_session.commit()
+    for order in orders:
+        db_session.refresh(order)
+    
+    return orders
+
+
+def get_auth_token(client, username: str, password: str) -> str:
+    """
+    認証トークンを取得するヘルパー関数
+    """
+    response = client.post(
+        "/api/auth/login",
+        json={"username": username, "password": password}
+    )
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+
+@pytest.fixture
+def auth_headers_customer_a(client, customer_user_a):
+    """
+    顧客Aの認証ヘッダー
+    """
+    token = get_auth_token(client, "customer_a", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_customer_b(client, customer_user_b):
+    """
+    顧客Bの認証ヘッダー
+    """
+    token = get_auth_token(client, "customer_b", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_customer_empty(client, customer_user_empty):
+    """
+    注文履歴がない顧客の認証ヘッダー
+    """
+    token = get_auth_token(client, "customer_empty", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_store(client, store_user):
+    """
+    店舗ユーザーの認証ヘッダー
+    """
+    token = get_auth_token(client, "store_user", "password123")
+    return {"Authorization": f"Bearer {token}"}

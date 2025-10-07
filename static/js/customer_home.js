@@ -7,6 +7,7 @@ class CustomerMenuPage {
         this.currentPage = 1;
         this.perPage = 12;
         this.orderItems = new Map(); // menuId -> quantity
+        this.isRendered = false; // 初回レンダリング完了フラグ
         
         this.initializePage();
     }
@@ -14,6 +15,9 @@ class CustomerMenuPage {
     async initializePage() {
         // 認証チェック
         if (!Auth.requireRole('customer')) return;
+        
+        // 共通UI初期化
+        initializeCommonUI();
         
         // ユーザー情報を表示
         this.updateUserInfo();
@@ -24,7 +28,13 @@ class CustomerMenuPage {
         // メニューデータの読み込み
         await this.loadMenus();
         
-        // フィルターの初期化
+        // 初回は全メニューをレンダリング
+        if (!this.isRendered) {
+            this.renderAllMenus();
+            this.isRendered = true;
+        }
+        
+        // フィルターの初期化（表示/非表示を切り替えるだけ）
         this.applyFilters();
     }
 
@@ -43,8 +53,13 @@ class CustomerMenuPage {
         const filterBtn = document.getElementById('filterBtn');
         const clearFilterBtn = document.getElementById('clearFilterBtn');
 
+        // 検索入力のデバウンス処理
+        let searchTimeout;
         if (searchInput) {
-            searchInput.addEventListener('input', debounce(() => this.applyFilters(), 300));
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => this.applyFilters(), 300);
+            });
         }
         
         if (filterBtn) {
@@ -82,6 +97,8 @@ class CustomerMenuPage {
             this.menus = response.menus;
             this.filteredMenus = [...this.menus];
             
+            this.hideLoading();
+            
             if (this.menus.length === 0) {
                 this.showEmptyMessage();
             } else {
@@ -90,6 +107,8 @@ class CustomerMenuPage {
             
         } catch (error) {
             console.error('Failed to load menus:', error);
+            
+            this.hideLoading();
             
             // 具体的なエラーメッセージを表示
             let errorMessage = 'メニューの読み込みに失敗しました';
@@ -107,6 +126,18 @@ class CustomerMenuPage {
         }
     }
 
+    renderAllMenus() {
+        const container = document.getElementById('menuGrid');
+        if (!container) return;
+
+        // 全メニューを一度だけレンダリング
+        const allMenuCards = this.menus.map(menu => this.createMenuCard(menu)).join('');
+        container.innerHTML = allMenuCards;
+        
+        // イベントリスナーを設定
+        this.setupMenuCardListeners();
+    }
+
     applyFilters() {
         const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
         const priceMin = parseInt(document.getElementById('priceMin')?.value) || 0;
@@ -121,7 +152,7 @@ class CustomerMenuPage {
         });
 
         this.currentPage = 1;
-        this.renderMenus();
+        this.updateMenuVisibility();
         this.updateResultCount();
     }
 
@@ -132,43 +163,86 @@ class CustomerMenuPage {
         
         this.filteredMenus = [...this.menus];
         this.currentPage = 1;
-        this.renderMenus();
+        this.updateMenuVisibility();
         this.updateResultCount();
     }
 
-    renderMenus() {
+    updateMenuVisibility() {
         const container = document.getElementById('menuGrid');
         if (!container) return;
 
         if (this.filteredMenus.length === 0) {
-            this.showEmptyState(container);
+            // 全カードを非表示
+            const allCards = container.querySelectorAll('.menu-card');
+            allCards.forEach(card => card.classList.add('hidden'));
+            
+            // 空メッセージを表示
+            let emptyState = container.querySelector('.empty-state');
+            if (!emptyState) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="no-menus-icon">🔍</div>
+                        <h3>メニューが見つかりません</h3>
+                        <p>検索条件を変更してみてください</p>
+                        <button type="button" class="btn btn-secondary" onclick="customerMenuPage.clearFilters()">
+                            フィルターをクリア
+                        </button>
+                    </div>
+                `;
+                emptyState = tempDiv.firstElementChild;
+                container.appendChild(emptyState);
+            } else {
+                emptyState.classList.remove('hidden');
+            }
             return;
         }
 
-        // ページネーション
+        // 空メッセージを非表示
+        const emptyState = container.querySelector('.empty-state');
+        if (emptyState) {
+            emptyState.classList.add('hidden');
+        }
+
+        // ページネーション計算
         const startIndex = (this.currentPage - 1) * this.perPage;
         const endIndex = startIndex + this.perPage;
-        const currentMenus = this.filteredMenus.slice(startIndex, endIndex);
+        
+        // 現在のページに表示すべきメニューIDのセット
+        const visibleMenuIds = new Set(
+            this.filteredMenus
+                .slice(startIndex, endIndex)
+                .map(menu => String(menu.id))
+        );
 
-        // メニューカードを生成
-        container.innerHTML = currentMenus.map(menu => this.createMenuCard(menu)).join('');
+        // リフローを最小化: 一度にすべてのクラスを変更
+        const allCards = container.querySelectorAll('.menu-card');
+        const fragment = document.createDocumentFragment();
+        
+        allCards.forEach(card => {
+            const menuId = card.dataset.menuId;
+            if (visibleMenuIds.has(menuId)) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
 
-        // イベントリスナーを設定
-        this.setupMenuCardListeners();
-
-        // ページネーション
+        // ページネーション更新
         this.setupPagination();
     }
 
-    createMenuCard(menu) {
-        const quantity = this.orderItems.get(menu.id) || 0;
-        const totalPrice = menu.price * quantity;
+    renderMenus() {
+        // 後方互換性のため残す（updateMenuVisibilityに委譲）
+        this.updateMenuVisibility();
+    }
 
+    createMenuCard(menu) {
         return `
             <div class="menu-card" data-menu-id="${menu.id}">
                 <div style="position: relative;">
                     <img src="${menu.image_url}" alt="${menu.name}" class="menu-image" 
-                         onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+                         onerror="this.onerror=null; this.style.display='none';">
                     <span class="availability-badge badge-available">利用可能</span>
                 </div>
                 <div class="menu-content">
@@ -178,25 +252,18 @@ class CustomerMenuPage {
                     
                     <div class="order-controls">
                         <div class="quantity-control">
-                            <button type="button" class="quantity-btn" data-action="decrease" ${quantity <= 0 ? 'disabled' : ''}>
-                                -
-                            </button>
-                            <input type="number" class="quantity-input" value="${quantity}" min="0" max="10" readonly>
-                            <button type="button" class="quantity-btn" data-action="increase" ${quantity >= 10 ? 'disabled' : ''}>
-                                +
-                            </button>
+                            <button type="button" class="quantity-btn" data-action="decrease">-</button>
+                            <input type="number" class="quantity-input" value="0" min="0" max="10" readonly>
+                            <button type="button" class="quantity-btn" data-action="increase">+</button>
                         </div>
                     </div>
                     
-                    ${quantity > 0 ? `
-                        <div class="order-summary">
-                            小計: ${UI.formatPrice(totalPrice)}
-                        </div>
-                    ` : ''}
+                    <div class="order-summary-static">
+                        <span class="summary-label">小計:</span> <span class="order-summary-price">&nbsp;</span>
+                    </div>
                     
                     <div class="menu-actions">
-                        <button type="button" class="btn btn-primary btn-sm order-now-btn" 
-                                ${quantity <= 0 ? 'disabled' : ''}>
+                        <button type="button" class="btn btn-primary btn-sm order-now-btn">
                             今すぐ注文
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm view-detail-btn">
@@ -270,34 +337,33 @@ class CustomerMenuPage {
 
         const quantity = this.orderItems.get(menuId) || 0;
         const menu = this.menus.find(m => m.id === menuId);
+        if (!menu) return;
+        
         const totalPrice = menu.price * quantity;
 
-        // 数量表示を更新
+        // DOM要素を取得
         const quantityInput = menuCard.querySelector('.quantity-input');
-        quantityInput.value = quantity;
-
-        // ボタンの有効/無効切り替え
         const decreaseBtn = menuCard.querySelector('[data-action="decrease"]');
         const increaseBtn = menuCard.querySelector('[data-action="increase"]');
         const orderBtn = menuCard.querySelector('.order-now-btn');
+        const summaryLabel = menuCard.querySelector('.summary-label');
+        const orderSummaryPrice = menuCard.querySelector('.order-summary-price');
 
-        decreaseBtn.disabled = quantity <= 0;
-        increaseBtn.disabled = quantity >= 10;
-        orderBtn.disabled = quantity <= 0;
-
-        // 小計表示を更新
-        const orderSummary = menuCard.querySelector('.order-summary');
-        if (quantity > 0) {
-            if (!orderSummary) {
-                const summaryDiv = document.createElement('div');
-                summaryDiv.className = 'order-summary';
-                summaryDiv.innerHTML = `小計: ${UI.formatPrice(totalPrice)}`;
-                menuCard.querySelector('.menu-actions').before(summaryDiv);
+        // 一括更新（リフロー最小化）
+        if (quantityInput) quantityInput.value = quantity;
+        if (decreaseBtn) decreaseBtn.disabled = quantity <= 0;
+        if (increaseBtn) increaseBtn.disabled = quantity >= 10;
+        if (orderBtn) orderBtn.disabled = quantity <= 0;
+        
+        // 小計の表示：テキストのみ変更（要素の表示/非表示なし）
+        if (summaryLabel && orderSummaryPrice) {
+            if (quantity > 0) {
+                summaryLabel.style.visibility = 'visible';
+                orderSummaryPrice.textContent = UI.formatPrice(totalPrice);
             } else {
-                orderSummary.innerHTML = `小計: ${UI.formatPrice(totalPrice)}`;
+                summaryLabel.style.visibility = 'hidden';
+                orderSummaryPrice.textContent = '\u00A0'; // 非改行スペース（高さ維持）
             }
-        } else if (orderSummary) {
-            orderSummary.remove();
         }
     }
 
@@ -387,7 +453,7 @@ class CustomerMenuPage {
                     </div>
                     <div class="modal-body">
                         <img src="${menu.image_url}" alt="${menu.name}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem;"
-                             onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
+                             onerror="this.onerror=null; this.style.display='none';">
                         <p style="color: #6c757d; line-height: 1.6; margin-bottom: 1rem;">
                             ${this.escapeHtml(menu.description || 'メニューの説明はありません。')}
                         </p>
@@ -444,21 +510,17 @@ class CustomerMenuPage {
     }
 
     showLoading() {
-        const container = document.getElementById('menuGrid');
-        if (!container) return;
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
+    }
 
-        const skeletonHtml = Array(6).fill().map(() => `
-            <div class="menu-skeleton">
-                <div class="skeleton-image"></div>
-                <div class="skeleton-content">
-                    <div class="skeleton-line short"></div>
-                    <div class="skeleton-line long"></div>
-                    <div class="skeleton-line short"></div>
-                </div>
-            </div>
-        `).join('');
-
-        container.innerHTML = `<div class="menu-loading">${skeletonHtml}</div>`;
+    hideLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
     }
 
     showError(message) {

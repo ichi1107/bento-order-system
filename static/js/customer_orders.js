@@ -14,6 +14,9 @@ class CustomerOrdersPage {
         // 認証チェック
         if (!Auth.requireRole('customer')) return;
         
+        // 共通UI初期化
+        initializeCommonUI();
+        
         // ユーザー情報を表示
         this.updateUserInfo();
         
@@ -86,7 +89,7 @@ class CustomerOrdersPage {
     }
 
     renderOrders() {
-        const container = document.getElementById('ordersContainer');
+        const container = document.getElementById('ordersList');
         if (!container) return;
 
         if (this.filteredOrders.length === 0) {
@@ -123,11 +126,11 @@ class CustomerOrdersPage {
                 </div>
                 <div class="order-content">
                     <div class="order-menu">
-                        <img src="${order.menu.image_url}" alt="${order.menu.name}" class="order-menu-image"
-                             onerror="this.src='https://via.placeholder.com/80x60?text=No+Image'">
+                        <img src="${order.menu_image_url || ''}" alt="${order.menu_name}" class="order-menu-image"
+                             onerror="this.onerror=null; this.style.display='none';">
                         <div class="order-menu-details">
-                            <div class="menu-name">${this.escapeHtml(order.menu.name)}</div>
-                            <div class="menu-price">${UI.formatPrice(order.menu.price)} × ${order.quantity}個</div>
+                            <div class="menu-name">${this.escapeHtml(order.menu_name)}</div>
+                            <div class="menu-price">${UI.formatPrice(order.menu_price)} × ${order.quantity}個</div>
                         </div>
                     </div>
                     <div class="order-total">
@@ -145,7 +148,7 @@ class CustomerOrdersPage {
                             キャンセル
                         </button>
                     ` : ''}
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="customerOrdersPage.reorder(${order.menu.id})">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="customerOrdersPage.reorder(${order.menu_id})">
                         再注文
                     </button>
                 </div>
@@ -185,7 +188,7 @@ class CustomerOrdersPage {
     }
 
     showLoading() {
-        const container = document.getElementById('ordersContainer');
+        const container = document.getElementById('ordersList');
         if (!container) return;
 
         container.innerHTML = `
@@ -197,7 +200,7 @@ class CustomerOrdersPage {
     }
 
     showError(message) {
-        const container = document.getElementById('ordersContainer');
+        const container = document.getElementById('ordersList');
         if (!container) return;
 
         container.innerHTML = `
@@ -213,7 +216,7 @@ class CustomerOrdersPage {
     }
 
     showEmptyMessage() {
-        const container = document.getElementById('ordersContainer');
+        const container = document.getElementById('ordersList');
         if (!container) return;
 
         container.innerHTML = `

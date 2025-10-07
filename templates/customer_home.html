@@ -21,7 +21,7 @@
                 </nav>
                 <div class="user-info">
                     <span id="userInfo"></span>
-                    <button id="logoutBtn" class="btn btn-sm btn-secondary">ログアウト</button>
+                    <button type="button" id="logoutBtn" class="btn btn-sm btn-secondary">ログアウト</button>
                 </div>
             </div>
         </div>
@@ -69,8 +69,15 @@
             </div>
 
             <!-- メニューグリッド -->
-            <div id="menuGrid" class="menu-grid">
-                <!-- メニューカードがここに動的に挿入される -->
+            <div style="position: relative;">
+                <div id="menuGrid" class="menu-grid">
+                    <!-- メニューカードがここに動的に挿入される -->
+                </div>
+                
+                <!-- ローディングオーバーレイ -->
+                <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                    <div class="spinner"></div>
+                </div>
             </div>
 
             <!-- ページネーション -->

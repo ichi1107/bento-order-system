@@ -1,73 +1,50 @@
 /* お客様注文履歴画面専用スタイル - customer_orders.css */
 
-.orders-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-}
-
-.orders-title {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #343a40;
-}
-
+/* フィルターセクション */
 .orders-filters {
     background: white;
     padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     margin-bottom: 2rem;
 }
 
-.filter-tabs {
+.filter-group {
     display: flex;
+    flex-direction: column;
     gap: 0.5rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #dee2e6;
 }
 
-.filter-tab {
-    background: none;
-    border: none;
-    padding: 0.75rem 1rem;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.3s ease;
-    font-weight: 500;
+.filter-group label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.875rem;
 }
 
-.filter-tab.active {
-    border-bottom-color: #007bff;
-    color: #007bff;
-}
-
-.filter-tab:hover {
-    background-color: #f8f9fa;
-}
-
+/* 注文リスト */
 .orders-list {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
+/* 注文カード */
 .order-card {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     overflow: hidden;
     transition: all 0.3s ease;
 }
 
 .order-card:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
     transform: translateY(-2px);
 }
 
 .order-header {
-    padding: 1rem 1.5rem;
+    padding: 1.25rem 1.5rem;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-bottom: 1px solid #dee2e6;
     display: flex;
@@ -82,8 +59,9 @@
 }
 
 .order-id {
-    font-weight: bold;
+    font-weight: 700;
     color: #495057;
+    font-size: 1.1rem;
 }
 
 .order-date {
@@ -94,7 +72,6 @@
 .order-status {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
 }
 
 .status-badge {
@@ -142,86 +119,82 @@
     border: 1px solid #f1b0b7;
 }
 
-.order-body {
+/* 注文コンテンツ */
+.order-content {
     padding: 1.5rem;
-}
-
-.order-details {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 1rem;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
+    gap: 1.5rem;
 }
 
-.menu-image {
+.order-menu {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.order-menu-image {
     width: 80px;
     height: 80px;
     object-fit: cover;
     border-radius: 8px;
     background-color: #f8f9fa;
+    flex-shrink: 0;
 }
 
-.menu-info {
+.order-menu-details {
     flex: 1;
 }
 
 .menu-name {
-    font-size: 1.25rem;
-    font-weight: bold;
+    font-size: 1.1rem;
+    font-weight: 600;
     color: #343a40;
     margin-bottom: 0.5rem;
 }
 
-.order-quantity {
+.menu-price {
     color: #6c757d;
-    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
 }
 
-.order-notes {
-    color: #6c757d;
-    font-style: italic;
-    font-size: 0.875rem;
-}
-
-.order-price {
+.order-total {
     text-align: right;
 }
 
 .total-price {
     font-size: 1.5rem;
-    font-weight: bold;
+    font-weight: 700;
     color: #007bff;
-    margin-bottom: 0.5rem;
 }
 
-.unit-price {
-    font-size: 0.875rem;
+/* 注文備考 */
+.order-notes {
+    padding: 0 1.5rem 1rem;
     color: #6c757d;
+    font-size: 0.875rem;
+    font-style: italic;
 }
 
+/* 注文アクション */
 .order-actions {
     padding: 1rem 1.5rem;
     background-color: #f8f9fa;
     border-top: 1px solid #dee2e6;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
 }
 
-.delivery-time {
-    color: #495057;
-    font-weight: 500;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.empty-orders {
+/* 空状態 */
+.empty-container {
     text-align: center;
     padding: 4rem 2rem;
-    color: #6c757d;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .empty-icon {
@@ -230,16 +203,93 @@
     opacity: 0.5;
 }
 
-.empty-title {
+.empty-container h3 {
     font-size: 1.5rem;
-    font-weight: bold;
-    margin-bottom: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
     color: #495057;
 }
 
-.empty-description {
+.empty-container p {
+    color: #6c757d;
     margin-bottom: 2rem;
     line-height: 1.6;
+}
+
+/* エラー状態 */
+.error-container {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.error-container h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #dc3545;
+}
+
+.error-container p {
+    color: #6c757d;
+    margin-bottom: 2rem;
+}
+
+/* ローディング状態 */
+.loading-container {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.loading-container p {
+    color: #6c757d;
+    margin-top: 1rem;
+}
+
+/* ページネーション */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1.5rem 0;
+}
+
+.pagination-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    color: #6c757d;
+    font-weight: 500;
 }
 
 /* 詳細モーダル */
