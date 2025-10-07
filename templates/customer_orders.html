@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>注文履歴 - 弁当注文システム</title>
     <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/customer_home.css">
     <link rel="stylesheet" href="/static/css/customer_orders.css">
 </head>
 <body>
@@ -21,7 +22,7 @@
                 </nav>
                 <div class="user-info">
                     <span id="userInfo"></span>
-                    <button id="logoutBtn" class="btn btn-sm btn-secondary">ログアウト</button>
+                    <button type="button" id="logoutBtn" class="btn btn-sm btn-secondary">ログアウト</button>
                 </div>
             </div>
         </div>
@@ -30,28 +31,38 @@
     <!-- ページヘッダー -->
     <div class="page-header">
         <div class="container">
-            <h1 class="page-title">ご注文履歴</h1>
-            <p class="page-subtitle">過去のご注文を確認できます</p>
+            <h1 class="page-title">📋 注文履歴</h1>
+            <p class="page-subtitle">過去の注文履歴を確認できます</p>
         </div>
     </div>
 
     <!-- メインコンテンツ -->
     <main class="main-content">
         <div class="container">
-            <!-- ローディングインジケーター -->
-            <div id="loadingIndicator" class="loading-indicator" style="display: none;">
-                <div class="spinner"></div>
-                <p>読み込み中...</p>
+            <!-- フィルター -->
+            <div class="orders-filters">
+                <div class="filter-group">
+                    <label for="statusFilter">ステータスで絞り込み</label>
+                    <select id="statusFilter" class="form-control">
+                        <option value="">全ての注文</option>
+                        <option value="pending">注文中</option>
+                        <option value="confirmed">確認済み</option>
+                        <option value="preparing">準備中</option>
+                        <option value="ready">受取準備完了</option>
+                        <option value="completed">完了</option>
+                        <option value="cancelled">キャンセル</option>
+                    </select>
+                </div>
             </div>
 
-            <!-- 注文が一件もない場合のメッセージ -->
-            <div id="emptyMessage" class="empty-message" style="display: none;">
-                <p>ご注文履歴はありません。</p>
-            </div>
-
-            <!-- 注文リストコンテナ -->
+            <!-- 注文リスト -->
             <div id="ordersList" class="orders-list">
-                <!-- JavaScriptで注文リストがここに描画されます -->
+                <!-- 注文履歴がここに動的に表示されます -->
+            </div>
+
+            <!-- ページネーション -->
+            <div id="pagination" class="pagination">
+                <!-- ページネーションがここに動的に表示されます -->
             </div>
         </div>
     </main>
@@ -59,7 +70,7 @@
     <!-- フッター -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2025 弁当注文システム</p>
+            <p>&copy; 2025 弁当注文システム. All rights reserved.</p>
         </div>
     </footer>
 

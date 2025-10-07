@@ -410,3 +410,40 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
         console.log('Auth token:', authToken);
     };
 }
+
+// 共通UI初期化フラグ
+let commonUIInitialized = false;
+
+// ログアウトハンドラー関数
+function handleLogout(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    
+    // ウィンドウにフォーカスを当ててからダイアログを表示
+    window.focus();
+    
+    if (confirm('ログアウトしますか?')) {
+        Auth.logout();
+    }
+}
+
+// 共通UI初期化関数
+function initializeCommonUI() {
+    if (commonUIInitialized) {
+        return;
+    }
+    
+    // ログアウトボタンの初期化
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        // 既存のイベントリスナーを削除（クローンして置き換える）
+        const newLogoutBtn = logoutBtn.cloneNode(true);
+        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+        
+        // 新しいボタンにイベントリスナーを追加
+        newLogoutBtn.addEventListener('click', handleLogout, true);
+        
+        commonUIInitialized = true;
+    }
+}

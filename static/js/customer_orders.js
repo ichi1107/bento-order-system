@@ -15,6 +15,9 @@ class CustomerOrdersPage {
         // お客様専用ページなので、roleチェック
         if (!Auth.requireRole('customer')) return;
         
+        // 共通UI初期化
+        initializeCommonUI();
+        
         // ユーザー情報を表示
         this.updateUserInfo();
         
@@ -154,14 +157,28 @@ class CustomerOrdersPage {
                     <span class="order-status ${statusClass}">${statusText}</span>
                     <span class="order-date">${orderDate}</span>
                 </div>
-                <div class="order-details">
-                    <div class="order-items">
-                        <p>${this.escapeHtml(order.menu_name)} × ${order.quantity}</p>
-                        ${order.notes ? `<p class="order-notes-text">備考: ${this.escapeHtml(order.notes)}</p>` : ''}
+                <div class="order-content">
+                    <div class="order-menu">
+                        <img src="${order.menu_image_url || ''}" alt="${order.menu_name}" class="order-menu-image"
+                             onerror="this.onerror=null; this.style.display='none';">
+                        <div class="order-menu-details">
+                            <div class="menu-name">${this.escapeHtml(order.menu_name)}</div>
+                            <div class="menu-price">${UI.formatPrice(order.menu_price)} × ${order.quantity}個</div>
+                        </div>
                     </div>
                     <div class="order-total">
                         <strong>合計: ${this.formatPrice(order.total_price)}</strong>
                     </div>
+                ` : ''}
+                <div class="order-actions">
+                    ${order.status === 'pending' ? `
+                        <button type="button" class="btn btn-sm btn-danger" onclick="customerOrdersPage.cancelOrder(${order.id})">
+                            キャンセル
+                        </button>
+                    ` : ''}
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="customerOrdersPage.reorder(${order.menu_id})">
+                        再注文
+                    </button>
                 </div>
             </div>
         `;
@@ -188,27 +205,48 @@ class CustomerOrdersPage {
         }
     }
 
-    showFilters() {
-        const ordersFilters = document.getElementById('ordersFilters');
-        if (ordersFilters) {
-            ordersFilters.style.display = 'flex';
-        }
+    showLoading() {
+        const container = document.getElementById('ordersList');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="loading-container">
+                <div class="loading"></div>
+                <p>注文履歴を読み込み中...</p>
+            </div>
+        `;
     }
 
-    getStatusText(status) {
-        const statusMap = {
-            'pending': '注文中',
-            'confirmed': '確認済み',
-            'preparing': '準備中',
-            'ready': '受取準備完了',
-            'completed': '完了',
-            'cancelled': 'キャンセル'
-        };
-        return statusMap[status] || status;
+    showError(message) {
+        const container = document.getElementById('ordersList');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="error-container">
+                <div class="error-icon">⚠️</div>
+                <h3>エラーが発生しました</h3>
+                <p>${message}</p>
+                <button type="button" class="btn btn-primary" onclick="location.reload()">
+                    再読み込み
+                </button>
+            </div>
+        `;
     }
 
-    formatPrice(price) {
-        return `¥${price.toLocaleString('ja-JP')}`;
+    showEmptyMessage() {
+        const container = document.getElementById('ordersList');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="empty-container">
+                <div class="empty-icon">📋</div>
+                <h3>注文履歴がありません</h3>
+                <p>まだ注文をされていません。</p>
+                <a href="/customer/home" class="btn btn-primary">
+                    メニューを見る
+                </a>
+            </div>
+        `;
     }
 
     formatDateTime(dateTimeString) {

@@ -371,6 +371,72 @@ pip list | grep pydantic-to-typescript
 console.log(localStorage.getItem('authToken'));
 ```
 
+## テスト
+
+### テスト環境のセットアップ
+
+```bash
+# 依存関係の更新（pytestを含む）
+pip-compile requirements.in
+pip install -r requirements.txt
+```
+
+### テストの実行
+
+```bash
+# 全テストを実行
+pytest
+
+# 詳細な出力で実行
+pytest -v
+
+# 特定のテストファイルのみ実行
+pytest tests/test_customer_orders.py
+
+# 特定のテストクラスのみ実行
+pytest tests/test_customer_orders.py::TestGetCustomerOrders
+
+# 特定のテストケースのみ実行
+pytest tests/test_customer_orders.py::TestGetCustomerOrders::test_get_own_orders_success
+
+# カバレッジレポート付きで実行（オプション）
+pytest --cov=. --cov-report=html
+```
+
+### テストの種類
+
+#### インテグレーションテスト
+APIエンドポイントの動作を検証するテスト:
+- `tests/test_customer_orders.py` - 注文履歴API
+
+#### セキュリティテスト
+認証・認可の動作を検証するテスト:
+- 未認証ユーザーのアクセス拒否
+- 他ユーザーのデータへのアクセス防止
+- 無効なトークンの拒否
+
+### Dockerコンテナ内でのテスト実行
+
+```bash
+# コンテナ内でテストを実行
+docker-compose exec web pytest
+
+# または、新しいコンテナでテストを実行
+docker-compose run --rm web pytest
+```
+
+### CI/CDでの実行
+
+GitHubActionsなどのCI環境では、以下のコマンドを使用:
+
+```yaml
+# .github/workflows/test.yml の例
+- name: Run tests
+  run: |
+    pip install -r requirements.txt
+    pytest -v --tb=short
+```
+
 ## ライセンス
 
 MIT License
