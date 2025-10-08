@@ -447,3 +447,98 @@ function initializeCommonUI() {
         commonUIInitialized = true;
     }
 }
+// �J�[�g�Ǘ��N���X
+class Cart {
+    constructor() {
+        this.items = this.loadFromStorage();
+    }
+
+    // LocalStorage����J�[�g�f�[�^��ǂݍ���
+    loadFromStorage() {
+        const cartData = localStorage.getItem('cart');
+        return cartData ? JSON.parse(cartData) : [];
+    }
+
+    // LocalStorage�ɃJ�[�g�f�[�^��ۑ�
+    saveToStorage() {
+        localStorage.setItem('cart', JSON.stringify(this.items));
+    }
+
+    // �J�[�g�ɃA�C�e����ǉ�
+    addItem(menu, quantity = 1) {
+        const existingItem = this.items.find(item => item.id === menu.id);
+        
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            this.items.push({
+                id: menu.id,
+                name: menu.name,
+                price: menu.price,
+                image_url: menu.image_url,
+                quantity: quantity
+            });
+        }
+        
+        this.saveToStorage();
+        this.updateCartCount();
+    }
+
+    // �J�[�g���̃A�C�e���̐��ʂ��X�V
+    updateQuantity(menuId, quantity) {
+        const item = this.items.find(item => item.id === menuId);
+        
+        if (item) {
+            if (quantity <= 0) {
+                this.removeItem(menuId);
+            } else {
+                item.quantity = quantity;
+                this.saveToStorage();
+                this.updateCartCount();
+            }
+        }
+    }
+
+    // �J�[�g����A�C�e�����폜
+    removeItem(menuId) {
+        this.items = this.items.filter(item => item.id !== menuId);
+        this.saveToStorage();
+        this.updateCartCount();
+    }
+
+    // �J�[�g���N���A
+    clear() {
+        this.items = [];
+        this.saveToStorage();
+        this.updateCartCount();
+    }
+
+    // �J�[�g���̑S�A�C�e�����擾
+    getItems() {
+        return this.items;
+    }
+
+    // �J�[�g���̃A�C�e�������擾
+    getItemCount() {
+        return this.items.reduce((total, item) => total + item.quantity, 0);
+    }
+
+    // �J�[�g�̍��v���z���擾
+    getTotalPrice() {
+        return this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    }
+
+    // �J�[�g�A�C�R���̃o�b�W���X�V
+    updateCartCount() {
+        const badge = document.getElementById('cartCount');
+        const count = this.getItemCount();
+        
+        if (badge) {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'inline-block' : 'none';
+        }
+    }
+}
+
+// グローバルカートインスタンス
+const cart = new Cart();

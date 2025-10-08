@@ -19,6 +19,9 @@ class CustomerMenuPage {
         // 共通UI初期化
         initializeCommonUI();
         
+        // カートバッジの初期化
+        cart.updateCartCount();
+        
         // ユーザー情報を表示
         this.updateUserInfo();
         
@@ -46,6 +49,64 @@ class CustomerMenuPage {
     }
 
     setupEventListeners() {
+        // カートボタン
+        const cartBtn = document.getElementById('cartBtn');
+        if (cartBtn) {
+            cartBtn.addEventListener('click', () => this.openCart());
+        }
+
+        // カートモーダル閉じるボタン
+        const closeCartBtn = document.getElementById('closeCartBtn');
+        if (closeCartBtn) {
+            closeCartBtn.addEventListener('click', () => this.closeCart());
+        }
+
+        // カートクリアボタン
+        const clearCartBtn = document.getElementById('clearCartBtn');
+        if (clearCartBtn) {
+            clearCartBtn.addEventListener('click', () => this.clearCart());
+        }
+
+        // チェックアウトボタン
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        if (checkoutBtn) {
+            checkoutBtn.addEventListener('click', () => this.checkout());
+        }
+
+        // モーダル外クリックで閉じる
+        const cartModal = document.getElementById('cartModal');
+        if (cartModal) {
+            cartModal.addEventListener('click', (e) => {
+                if (e.target === cartModal) {
+                    this.closeCart();
+                }
+            });
+        }
+
+        // メニューカード内のボタンイベント（イベント委譲）
+        const menuGrid = document.getElementById('menuGrid');
+        if (menuGrid) {
+            menuGrid.addEventListener('click', (e) => {
+                const card = e.target.closest('.menu-card');
+                if (!card) return;
+
+                const menuId = parseInt(card.dataset.menuId);
+                const menu = this.menus.find(m => m.id === menuId);
+                if (!menu) return;
+
+                // カゴへ入れるボタン
+                if (e.target.closest('.add-to-cart-btn')) {
+                    this.addToCart(menu, card);
+                }
+
+                // 数量増減ボタン
+                if (e.target.closest('.quantity-btn')) {
+                    const action = e.target.closest('.quantity-btn').dataset.action;
+                    this.updateQuantity(card, action);
+                }
+            });
+        }
+
         // 検索フィルター
         const searchInput = document.getElementById('searchInput');
         const priceMinInput = document.getElementById('priceMin');
@@ -134,9 +195,6 @@ class CustomerMenuPage {
         // 全メニューを一度だけレンダリング
         const allMenuCards = this.menus.map(menu => this.createMenuCard(menu)).join('');
         container.innerHTML = allMenuCards;
-        
-        // イベントリスナーを設定
-        this.setupMenuCardListeners();
     }
 
     applyFilters() {
@@ -264,230 +322,13 @@ class CustomerMenuPage {
                     </div>
                     
                     <div class="menu-actions">
-                        <button type="button" class="btn btn-primary btn-sm order-now-btn">
-                            今すぐ注文
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm view-detail-btn">
-                            詳細を見る
+                        <button type="button" class="btn btn-primary btn-block add-to-cart-btn">
+                            🛒 カゴへ入れる
                         </button>
                     </div>
                 </div>
             </div>
         `;
-    }
-
-    setupMenuCardListeners() {
-        // 数量変更ボタン
-        document.querySelectorAll('.quantity-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const action = btn.dataset.action;
-                const menuCard = btn.closest('.menu-card');
-                const menuId = parseInt(menuCard.dataset.menuId);
-                
-                this.updateQuantity(menuId, action);
-            });
-        });
-
-        // 今すぐ注文ボタン
-        document.querySelectorAll('.order-now-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const menuCard = btn.closest('.menu-card');
-                const menuId = parseInt(menuCard.dataset.menuId);
-                
-                this.orderNow(menuId);
-            });
-        });
-
-        // 詳細表示ボタン
-        document.querySelectorAll('.view-detail-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const menuCard = btn.closest('.menu-card');
-                const menuId = parseInt(menuCard.dataset.menuId);
-                
-                this.showMenuDetail(menuId);
-            });
-        });
-    }
-
-    updateQuantity(menuId, action) {
-        const currentQuantity = this.orderItems.get(menuId) || 0;
-        let newQuantity = currentQuantity;
-
-        if (action === 'increase' && currentQuantity < 10) {
-            newQuantity = currentQuantity + 1;
-        } else if (action === 'decrease' && currentQuantity > 0) {
-            newQuantity = currentQuantity - 1;
-        }
-
-        if (newQuantity <= 0) {
-            this.orderItems.delete(menuId);
-        } else {
-            this.orderItems.set(menuId, newQuantity);
-        }
-
-        // UIを更新
-        this.updateMenuCardUI(menuId);
-    }
-
-    updateMenuCardUI(menuId) {
-        const menuCard = document.querySelector(`[data-menu-id="${menuId}"]`);
-        if (!menuCard) return;
-
-        const quantity = this.orderItems.get(menuId) || 0;
-        const menu = this.menus.find(m => m.id === menuId);
-        if (!menu) return;
-        
-        const totalPrice = menu.price * quantity;
-
-        // DOM要素を取得
-        const quantityInput = menuCard.querySelector('.quantity-input');
-        const decreaseBtn = menuCard.querySelector('[data-action="decrease"]');
-        const increaseBtn = menuCard.querySelector('[data-action="increase"]');
-        const orderBtn = menuCard.querySelector('.order-now-btn');
-        const summaryLabel = menuCard.querySelector('.summary-label');
-        const orderSummaryPrice = menuCard.querySelector('.order-summary-price');
-
-        // 一括更新（リフロー最小化）
-        if (quantityInput) quantityInput.value = quantity;
-        if (decreaseBtn) decreaseBtn.disabled = quantity <= 0;
-        if (increaseBtn) increaseBtn.disabled = quantity >= 10;
-        if (orderBtn) orderBtn.disabled = quantity <= 0;
-        
-        // 小計の表示：テキストのみ変更（要素の表示/非表示なし）
-        if (summaryLabel && orderSummaryPrice) {
-            if (quantity > 0) {
-                summaryLabel.style.visibility = 'visible';
-                orderSummaryPrice.textContent = UI.formatPrice(totalPrice);
-            } else {
-                summaryLabel.style.visibility = 'hidden';
-                orderSummaryPrice.textContent = '\u00A0'; // 非改行スペース（高さ維持）
-            }
-        }
-    }
-
-    async orderNow(menuId) {
-        const quantity = this.orderItems.get(menuId);
-        if (!quantity || quantity <= 0) {
-            UI.showAlert('数量を選択してください', 'warning');
-            return;
-        }
-
-        const menu = this.menus.find(m => m.id === menuId);
-        if (!menu) {
-            UI.showAlert('メニューが見つかりません', 'danger');
-            return;
-        }
-
-        // 注文確認
-        const confirmed = confirm(`${menu.name} を ${quantity}個 注文しますか？\n合計金額: ${UI.formatPrice(menu.price * quantity)}`);
-        if (!confirmed) return;
-
-        try {
-            // ボタンを無効化してローディング表示
-            const menuCard = document.querySelector(`[data-menu-id="${menuId}"]`);
-            const orderBtn = menuCard?.querySelector('.order-now-btn');
-            if (orderBtn) {
-                orderBtn.disabled = true;
-                orderBtn.textContent = '注文中...';
-            }
-
-            const orderData = {
-                menu_id: menuId,
-                quantity: quantity,
-                notes: ''
-            };
-
-            const response = await ApiClient.post('/customer/orders', orderData);
-            
-            if (!response || !response.id) {
-                throw new Error('注文の作成に失敗しました');
-            }
-            
-            UI.showAlert(`${menu.name} を ${quantity}個 注文しました！\n注文番号: ${response.id}`, 'success');
-            
-            // 注文後、数量をリセット
-            this.orderItems.delete(menuId);
-            this.updateMenuCardUI(menuId);
-            
-        } catch (error) {
-            console.error('Order failed:', error);
-            
-            // 具体的なエラーメッセージを表示
-            let errorMessage = '注文に失敗しました';
-            if (error.message.includes('401')) {
-                errorMessage = '認証が切れました。再度ログインしてください。';
-                setTimeout(() => Auth.logout(), 2000);
-            } else if (error.message.includes('404')) {
-                errorMessage = '選択されたメニューは現在利用できません。';
-            } else if (error.message.includes('400')) {
-                errorMessage = '注文内容に問題があります。数量を確認してください。';
-            } else if (error.message.includes('500')) {
-                errorMessage = 'サーバーエラーが発生しました。しばらく時間をおいて再度お試しください。';
-            }
-            
-            UI.showAlert(errorMessage, 'danger');
-        } finally {
-            // ボタンを元に戻す
-            const menuCard = document.querySelector(`[data-menu-id="${menuId}"]`);
-            const orderBtn = menuCard?.querySelector('.order-now-btn');
-            if (orderBtn) {
-                orderBtn.disabled = this.orderItems.get(menuId) <= 0;
-                orderBtn.textContent = '今すぐ注文';
-            }
-        }
-    }
-
-    showMenuDetail(menuId) {
-        const menu = this.menus.find(m => m.id === menuId);
-        if (!menu) return;
-
-        // モーダルでメニュー詳細を表示
-        const modalHtml = `
-            <div id="menuDetailModal" class="modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2 class="modal-title">${this.escapeHtml(menu.name)}</h2>
-                        <button type="button" class="modal-close">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <img src="${menu.image_url}" alt="${menu.name}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem;"
-                             onerror="this.onerror=null; this.style.display='none';">
-                        <p style="color: #6c757d; line-height: 1.6; margin-bottom: 1rem;">
-                            ${this.escapeHtml(menu.description || 'メニューの説明はありません。')}
-                        </p>
-                        <div style="font-size: 1.5rem; font-weight: bold; color: #007bff; margin-bottom: 1rem;">
-                            ${UI.formatPrice(menu.price)}
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" onclick="Modal.hide('menuDetailModal')">閉じる</button>
-                        <button type="button" class="btn btn-primary" onclick="customerMenuPage.orderFromModal(${menuId})">注文する</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // モーダルを表示
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        Modal.setupCloseHandlers('menuDetailModal');
-        Modal.show('menuDetailModal');
-    }
-
-    orderFromModal(menuId) {
-        Modal.hide('menuDetailModal');
-        
-        // 数量を1に設定して注文
-        this.orderItems.set(menuId, 1);
-        this.orderNow(menuId);
-        
-        // モーダルを削除
-        setTimeout(() => {
-            const modal = document.getElementById('menuDetailModal');
-            if (modal) modal.remove();
-        }, 300);
     }
 
     setupPagination() {
@@ -573,6 +414,191 @@ class CustomerMenuPage {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // カート操作メソッド
+    addToCart(menu, card) {
+        console.log('Adding to cart - menu object:', menu);
+        const quantityInput = card.querySelector('.quantity-input');
+        const quantity = parseInt(quantityInput.value) || 1;
+        
+        if (quantity <= 0) {
+            UI.showAlert('数量を選択してください', 'warning');
+            return;
+        }
+
+        cart.addItem(menu, quantity);
+        UI.showAlert(`${menu.name} をカートに追加しました`, 'success');
+        
+        // 数量をリセット
+        quantityInput.value = 0;
+        this.updateCardSubtotal(card);
+    }
+
+    openCart() {
+        console.log('Opening cart...');
+        console.log('Cart items:', cart.getItems());
+        this.renderCart();
+        const modal = document.getElementById('cartModal');
+        console.log('Modal element:', modal);
+        if (modal) {
+            modal.classList.add('show');
+            console.log('Modal classes:', modal.className);
+        } else {
+            console.error('Cart modal element not found!');
+        }
+    }
+
+    closeCart() {
+        const modal = document.getElementById('cartModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+
+    renderCart() {
+        console.log('Rendering cart...');
+        const cartItems = cart.getItems();
+        console.log('Cart items to render:', cartItems);
+        const container = document.getElementById('cartItems');
+        const totalPriceElement = document.getElementById('cartTotalPrice');
+        
+        console.log('Cart container:', container);
+        console.log('Total price element:', totalPriceElement);
+        
+        if (!container) {
+            console.error('Cart items container not found!');
+            return;
+        }
+
+        if (cartItems.length === 0) {
+            container.innerHTML = `
+                <div class="empty-cart">
+                    <div class="empty-cart-icon">🛒</div>
+                    <h3>カートは空です</h3>
+                    <p>メニューから商品を選んでください</p>
+                </div>
+            `;
+            if (totalPriceElement) {
+                totalPriceElement.textContent = '¥0';
+            }
+            return;
+        }
+
+        container.innerHTML = cartItems.map(item => `
+            <div class="cart-item" data-menu-id="${item.id}">
+                <img src="${item.image_url || ''}" alt="${item.name}" class="cart-item-image"
+                     onerror="this.onerror=null; this.style.display='none';">
+                <div class="cart-item-details">
+                    <div class="cart-item-name">${this.escapeHtml(item.name)}</div>
+                    <div class="cart-item-price">¥${(item.price || 0).toLocaleString()} × ${item.quantity}個</div>
+                </div>
+                <div class="cart-item-controls">
+                    <div class="quantity-control">
+                        <button type="button" class="quantity-btn" onclick="customerMenuPage.updateCartQuantity(${item.id}, ${item.quantity - 1})">-</button>
+                        <input type="number" class="quantity-input" value="${item.quantity}" min="1" readonly>
+                        <button type="button" class="quantity-btn" onclick="customerMenuPage.updateCartQuantity(${item.id}, ${item.quantity + 1})">+</button>
+                    </div>
+                    <button type="button" class="remove-item-btn" onclick="customerMenuPage.removeFromCart(${item.id})">削除</button>
+                </div>
+            </div>
+        `).join('');
+
+        if (totalPriceElement) {
+            totalPriceElement.textContent = `¥${cart.getTotalPrice().toLocaleString()}`;
+        }
+    }
+
+    updateCartQuantity(menuId, newQuantity) {
+        cart.updateQuantity(menuId, newQuantity);
+        this.renderCart();
+    }
+
+    removeFromCart(menuId) {
+        if (confirm('この商品をカートから削除しますか?')) {
+            cart.removeItem(menuId);
+            this.renderCart();
+            UI.showAlert('カートから削除しました', 'success');
+        }
+    }
+
+    clearCart() {
+        if (cart.getItemCount() === 0) {
+            UI.showAlert('カートは既に空です', 'info');
+            return;
+        }
+
+        if (confirm('カート内のすべての商品を削除しますか?')) {
+            cart.clear();
+            this.renderCart();
+            UI.showAlert('カートをクリアしました', 'success');
+        }
+    }
+
+    async checkout() {
+        const items = cart.getItems();
+        
+        if (items.length === 0) {
+            UI.showAlert('カートに商品がありません', 'warning');
+            return;
+        }
+
+        try {
+            // 各商品を個別に注文
+            for (const item of items) {
+                await ApiClient.post('/customer/orders', {
+                    menu_id: item.id,
+                    quantity: item.quantity
+                });
+            }
+
+            UI.showAlert('注文が完了しました!', 'success');
+            cart.clear();
+            this.closeCart();
+            
+            // 注文履歴ページへリダイレクト
+            setTimeout(() => {
+                window.location.href = '/customer/orders';
+            }, 1500);
+
+        } catch (error) {
+            console.error('Checkout failed:', error);
+            UI.showAlert('注文に失敗しました。もう一度お試しください。', 'danger');
+        }
+    }
+
+    updateCardSubtotal(card) {
+        const quantityInput = card.querySelector('.quantity-input');
+        const subtotalElement = card.querySelector('.order-summary-price');
+        const menuId = parseInt(card.dataset.menuId);
+        const menu = this.menus.find(m => m.id === menuId);
+        
+        if (!menu || !quantityInput || !subtotalElement) return;
+        
+        const quantity = parseInt(quantityInput.value) || 0;
+        const subtotal = menu.price * quantity;
+        
+        if (quantity > 0) {
+            subtotalElement.textContent = UI.formatPrice(subtotal);
+        } else {
+            subtotalElement.innerHTML = '&nbsp;';
+        }
+    }
+
+    updateQuantity(card, action) {
+        const input = card.querySelector('.quantity-input');
+        if (!input) return;
+
+        let currentValue = parseInt(input.value) || 0;
+        const max = parseInt(input.getAttribute('max')) || 10;
+
+        if (action === 'increase' && currentValue < max) {
+            input.value = currentValue + 1;
+        } else if (action === 'decrease' && currentValue > 0) {
+            input.value = currentValue - 1;
+        }
+
+        this.updateCardSubtotal(card);
     }
 }
 
