@@ -48,9 +48,14 @@ class CustomerOrdersPage {
             statusFilter.addEventListener('change', () => this.applyFilters());
         }
 
-        const dateFilter = document.getElementById('dateFilter');
-        if (dateFilter) {
-            dateFilter.addEventListener('change', () => this.applyFilters());
+        const dateFromFilter = document.getElementById('dateFromFilter');
+        if (dateFromFilter) {
+            dateFromFilter.addEventListener('change', () => this.applyFilters());
+        }
+
+        const dateToFilter = document.getElementById('dateToFilter');
+        if (dateToFilter) {
+            dateToFilter.addEventListener('change', () => this.applyFilters());
         }
     }
 
@@ -80,8 +85,6 @@ class CustomerOrdersPage {
             if (this.orders.length === 0) {
                 this.showEmptyMessage();
             } else {
-                // フィルターを表示
-                this.showFilters();
                 // 注文リストを描画
                 this.renderOrders();
             }
@@ -104,7 +107,8 @@ class CustomerOrdersPage {
 
     applyFilters() {
         const statusFilter = document.getElementById('statusFilter')?.value || '';
-        const dateFilter = document.getElementById('dateFilter')?.value || '';
+        const dateFromFilter = document.getElementById('dateFromFilter')?.value || '';
+        const dateToFilter = document.getElementById('dateToFilter')?.value || '';
         
         this.filteredOrders = this.orders.filter(order => {
             // ステータスフィルター
@@ -112,12 +116,17 @@ class CustomerOrdersPage {
                 return false;
             }
             
-            // 日付フィルター
-            if (dateFilter) {
-                const orderDate = new Date(order.ordered_at).toISOString().split('T')[0];
-                if (orderDate !== dateFilter) {
-                    return false;
-                }
+            // 日付期間フィルター
+            const orderDate = new Date(order.ordered_at).toISOString().split('T')[0];
+            
+            // 開始日チェック
+            if (dateFromFilter && orderDate < dateFromFilter) {
+                return false;
+            }
+            
+            // 終了日チェック
+            if (dateToFilter && orderDate > dateToFilter) {
+                return false;
             }
             
             return true;
@@ -163,13 +172,13 @@ class CustomerOrdersPage {
                              onerror="this.onerror=null; this.style.display='none';">
                         <div class="order-menu-details">
                             <div class="menu-name">${this.escapeHtml(order.menu_name)}</div>
-                            <div class="menu-price">${UI.formatPrice(order.menu_price)} × ${order.quantity}個</div>
+                            <div class="menu-price">¥${order.menu_price.toLocaleString()} × ${order.quantity}個</div>
                         </div>
                     </div>
                     <div class="order-total">
-                        <strong>合計: ${this.formatPrice(order.total_price)}</strong>
+                        <strong>合計: ¥${order.total_price.toLocaleString()}</strong>
                     </div>
-                ` : ''}
+                </div>
                 <div class="order-actions">
                     ${order.status === 'pending' ? `
                         <button type="button" class="btn btn-sm btn-danger" onclick="customerOrdersPage.cancelOrder(${order.id})">
@@ -184,25 +193,16 @@ class CustomerOrdersPage {
         `;
     }
 
-    showLoading() {
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        if (loadingIndicator) {
-            loadingIndicator.style.display = 'block';
-        }
-    }
-
-    hideLoading() {
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        if (loadingIndicator) {
-            loadingIndicator.style.display = 'none';
-        }
-    }
-
-    showEmptyMessage() {
-        const emptyMessage = document.getElementById('emptyMessage');
-        if (emptyMessage) {
-            emptyMessage.style.display = 'block';
-        }
+    getStatusText(status) {
+        const statusMap = {
+            'pending': '注文中',
+            'confirmed': '確認済み',
+            'preparing': '準備中',
+            'ready': '受取準備完了',
+            'completed': '完了',
+            'cancelled': 'キャンセル'
+        };
+        return statusMap[status] || status;
     }
 
     showLoading() {
@@ -215,6 +215,10 @@ class CustomerOrdersPage {
                 <p>注文履歴を読み込み中...</p>
             </div>
         `;
+    }
+
+    hideLoading() {
+        // ローディング表示はrenderOrdersやshowEmptyMessageで上書きされるので何もしない
     }
 
     showError(message) {
@@ -265,6 +269,26 @@ class CustomerOrdersPage {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    async cancelOrder(orderId) {
+        if (!confirm('この注文をキャンセルしますか?')) {
+            return;
+        }
+
+        try {
+            await ApiClient.delete(`/customer/orders/${orderId}`);
+            UI.showAlert('注文をキャンセルしました', 'success');
+            await this.loadOrders(); // 注文リストを再読み込み
+        } catch (error) {
+            console.error('Failed to cancel order:', error);
+            UI.showAlert('注文のキャンセルに失敗しました', 'danger');
+        }
+    }
+
+    reorder(menuId) {
+        // メニューページに遷移
+        window.location.href = `/customer/home?menu=${menuId}`;
     }
 }
 
