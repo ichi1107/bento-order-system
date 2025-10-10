@@ -25,6 +25,34 @@ class User(Base):
 
     # リレーションシップ
     orders = relationship("Order", back_populates="user")
+    user_roles = relationship("UserRole", back_populates="user")
+
+
+class Role(Base):
+    """役割テーブル（店舗スタッフの職位管理）"""
+    __tablename__ = "roles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), unique=True, nullable=False, index=True)  # 'owner', 'manager', 'staff'
+    description = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # リレーションシップ
+    user_roles = relationship("UserRole", back_populates="role")
+
+
+class UserRole(Base):
+    """ユーザー役割紐付けテーブル"""
+    __tablename__ = "user_roles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role_id = Column(Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, index=True)
+    assigned_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # リレーションシップ
+    user = relationship("User", back_populates="user_roles")
+    role = relationship("Role", back_populates="user_roles")
 
 
 class Menu(Base):
