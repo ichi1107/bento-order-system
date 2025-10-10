@@ -235,10 +235,10 @@ class TestCreateOrder:
     
     def test_unauthorized_access(self, client, test_menu):
         """
-        テスト9: 未認証ユーザーはアクセスできないこと
+        テスト9: 未認証ユーザーは注文を作成できないこと
         
         検証項目:
-        - 認証ヘッダーなしでアクセスすると403エラーが返されること
+        - 認証ヘッダーなしでアクセスすると401エラーが返されること
         """
         order_data = {
             "menu_id": test_menu.id,
@@ -247,7 +247,7 @@ class TestCreateOrder:
         
         response = client.post("/api/customer/orders", json=order_data)
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "detail" in response.json()
     
     def test_store_user_cannot_create_order(

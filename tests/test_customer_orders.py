@@ -184,11 +184,11 @@ class TestGetCustomerOrders:
         テスト5: 未認証ユーザーはアクセスできないこと
         
         検証項目:
-        - 認証ヘッダーなしでアクセスすると403エラーが返されること
+        - 認証ヘッダーなしでアクセスすると401エラーが返されること
         """
         response = client.get("/api/customer/orders")
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "detail" in response.json()
     
     def test_invalid_token(self, client):

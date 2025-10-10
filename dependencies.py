@@ -5,54 +5,77 @@ FastAPIの依存関数（Dependency Injection）を定義
 認証が必要なエンドポイントで使用
 """
 
-from typing import Optional
+from typing import List, Optional
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from database import get_db
-from auth import verify_token
-from models import User
+from auth import verify_token, decode_token
+from models import User, Role, UserRole
 
-# HTTPBearer認証スキーム
-security = HTTPBearer()
+# OAuth2認証スキーム（Swagger UI対応）
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+# カスタム例外クラス
+class InvalidCredentialsException(HTTPException):
+    """無効な認証情報の例外"""
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+class InactiveUserException(HTTPException):
+    """非アクティブユーザーの例外"""
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user account",
+        )
+
+
+class InsufficientPermissionsException(HTTPException):
+    """権限不足の例外"""
+    def __init__(self, required_roles: List[str]):
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Insufficient permissions. Required roles: {', '.join(required_roles)}",
+        )
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
     """
     現在のユーザーを取得
     
     Args:
-        credentials: 認証情報
+        token: JWTトークン
         db: データベースセッション
         
     Returns:
         User: 現在のユーザー
         
     Raises:
-        HTTPException: 認証に失敗した場合
+        InvalidCredentialsException: 認証に失敗した場合
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
     try:
         # トークンからユーザー名を取得
-        username = verify_token(credentials.credentials)
+        username = verify_token(token)
         if username is None:
-            raise credentials_exception
+            raise InvalidCredentialsException()
     except Exception:
-        raise credentials_exception
+        raise InvalidCredentialsException()
     
     # データベースからユーザーを取得
     user = db.query(User).filter(User.username == username).first()
     if user is None:
-        raise credentials_exception
+        raise InvalidCredentialsException()
     
     return user
 
@@ -68,11 +91,102 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
         User: アクティブなユーザー
         
     Raises:
-        HTTPException: ユーザーが無効化されている場合
+        InactiveUserException: ユーザーが無効化されている場合
     """
     if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise InactiveUserException()
     return current_user
+
+
+def get_current_user_from_refresh_token(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> User:
+    """
+    リフレッシュトークンから現在のユーザーを取得
+    
+    Args:
+        token: リフレッシュトークン
+        db: データベースセッション
+        
+    Returns:
+        User: 現在のユーザー
+        
+    Raises:
+        InvalidCredentialsException: 認証に失敗した場合
+    """
+    try:
+        # トークンをデコードしてペイロードを取得
+        payload = decode_token(token)
+        
+        # リフレッシュトークンであることを確認
+        if payload.get("type") != "refresh":
+            raise InvalidCredentialsException()
+        
+        username: str = payload.get("sub")
+        if username is None:
+            raise InvalidCredentialsException()
+    except Exception:
+        raise InvalidCredentialsException()
+    
+    # データベースからユーザーを取得
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        raise InvalidCredentialsException()
+    
+    return user
+
+
+def require_role(allowed_roles: List[str]):
+    """
+    指定された役割を持つユーザーのみアクセス可能にする依存性を返す
+    
+    Args:
+        allowed_roles: 許可される役割のリスト (例: ['owner', 'manager'])
+        
+    Returns:
+        依存性関数
+        
+    Example:
+        @app.get("/admin", dependencies=[Depends(require_role(['owner']))])
+        def admin_endpoint():
+            return {"message": "Admin only"}
+    """
+    def role_checker(
+        current_user: User = Depends(get_current_active_user),
+        db: Session = Depends(get_db)
+    ) -> User:
+        """
+        ユーザーの役割を確認
+        
+        Args:
+            current_user: 現在のアクティブユーザー
+            db: データベースセッション
+            
+        Returns:
+            User: 権限を持つユーザー
+            
+        Raises:
+            InsufficientPermissionsException: 権限が不足している場合
+        """
+        # UserRoleテーブルから役割を取得
+        user_roles = (
+            db.query(Role.name)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .filter(UserRole.user_id == current_user.id)
+            .all()
+        )
+        
+        # ユーザーが持つ役割名のリストを作成
+        user_role_names = [role.name for role in user_roles]
+        
+        # 許可された役割のいずれかを持っているかチェック
+        if not any(role in user_role_names for role in allowed_roles):
+            raise InsufficientPermissionsException(allowed_roles)
+        
+        return current_user
+    
+    return role_checker
 
 
 def get_current_customer(current_user: User = Depends(get_current_active_user)) -> User:

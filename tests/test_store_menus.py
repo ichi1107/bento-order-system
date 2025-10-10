@@ -107,7 +107,7 @@ class TestCreateMenu:
         テスト4: 未認証ユーザーはアクセスできないこと
         
         検証項目:
-        - 認証ヘッダーなしでアクセスすると403エラーが返されること
+        - 認証ヘッダーなしでアクセスすると401エラーが返されること
         """
         menu_data = {
             "name": "テスト弁当",
@@ -116,7 +116,7 @@ class TestCreateMenu:
         
         response = client.post("/api/store/menus", json=menu_data)
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "detail" in response.json()
     
     def test_customer_cannot_create_menu(
@@ -267,7 +267,7 @@ class TestUpdateMenu:
         テスト5: 未認証ユーザーはアクセスできないこと
         
         検証項目:
-        - 認証ヘッダーなしでアクセスすると403エラーが返されること
+        - 認証ヘッダーなしでアクセスすると401エラーが返されること
         """
         update_data = {
             "name": "更新"
@@ -278,7 +278,7 @@ class TestUpdateMenu:
             json=update_data
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "detail" in response.json()
     
     def test_customer_cannot_update_menu(
@@ -395,11 +395,11 @@ class TestDeleteMenu:
         テスト4: 未認証ユーザーはアクセスできないこと
         
         検証項目:
-        - 認証ヘッダーなしでアクセスすると403エラーが返されること
+        - 認証ヘッダーなしでアクセスすると401エラーが返されること
         """
         response = client.delete(f"/api/store/menus/{test_menu.id}")
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "detail" in response.json()
     
     def test_customer_cannot_delete_menu(

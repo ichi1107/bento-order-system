@@ -113,11 +113,11 @@ class TestGetMenus:
         テスト4: 未認証ユーザーはアクセスできないこと
         
         検証項目:
-        - 認証ヘッダーなしでアクセスすると403エラーが返されること
+        - 認証ヘッダーなしでアクセスすると401エラーが返されること
         """
         response = client.get("/api/customer/menus")
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "detail" in response.json()
 
 
@@ -173,9 +173,9 @@ class TestGetMenuDetail:
         テスト3: 未認証ユーザーはアクセスできないこと
         
         検証項目:
-        - 認証ヘッダーなしでアクセスすると403エラーが返されること
+        - 認証ヘッダーなしでアクセスすると401エラーが返されること
         """
         response = client.get(f"/api/customer/menus/{test_menu.id}")
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "detail" in response.json()

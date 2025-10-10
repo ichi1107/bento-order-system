@@ -133,11 +133,11 @@ class TestGetAllOrders:
         テスト5: 未認証ユーザーはアクセスできないこと
         
         検証項目:
-        - 認証ヘッダーなしでアクセスすると403エラーが返されること
+        - 認証ヘッダーなしでアクセスすると401エラーが返されること
         """
         response = client.get("/api/store/orders")
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "detail" in response.json()
     
     def test_customer_cannot_access(
@@ -247,7 +247,7 @@ class TestUpdateOrderStatus:
         テスト4: 未認証ユーザーはアクセスできないこと
         
         検証項目:
-        - 認証ヘッダーなしでアクセスすると403エラーが返されること
+        - 認証ヘッダーなしでアクセスすると401エラーが返されること
         """
         order = orders_for_customer_a[0]
         
@@ -256,7 +256,7 @@ class TestUpdateOrderStatus:
             json={"status": "confirmed"}
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "detail" in response.json()
     
     def test_customer_cannot_update_status(
