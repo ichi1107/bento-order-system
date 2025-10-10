@@ -50,6 +50,41 @@ export interface TokenResponse {
   user: UserResponse;
 }
 
+// ===== 役割（Role）関連 =====
+
+export type RoleName = 'owner' | 'manager' | 'staff';
+
+export interface RoleResponse {
+  id: number;
+  name: RoleName;
+  description: string | null;
+  created_at: string;
+}
+
+export interface RoleAssignRequest {
+  user_id: number;
+  role_id: number;
+}
+
+export interface UserRoleResponse {
+  id: number;
+  user_id: number;
+  role_id: number;
+  assigned_at: string;
+  role: RoleResponse;
+}
+
+export interface UserWithRolesResponse {
+  id: number;
+  username: string;
+  email: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  user_roles: UserRoleResponse[];
+}
+
 // ===== メニュー関連 =====
 
 export interface MenuBase {
