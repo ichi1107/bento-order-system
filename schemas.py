@@ -12,7 +12,7 @@ API契約定義 - Single Source of Truth
 """
 
 from datetime import datetime, time
-from typing import Optional, List
+from typing import Optional, List, Literal
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -67,6 +67,54 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+# ===== 役割（Role）関連 =====
+
+class RoleResponse(BaseModel):
+    """役割情報のレスポンス"""
+    id: int
+    name: Literal['owner', 'manager', 'staff']
+    description: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RoleAssignRequest(BaseModel):
+    """ユーザーへ役割を割り当てるリクエスト"""
+    user_id: int = Field(..., ge=1, description="割り当て対象のユーザーID")
+    role_id: int = Field(..., ge=1, description="割り当てる役割ID")
+
+
+class UserRoleResponse(BaseModel):
+    """ユーザー役割割り当て情報のレスポンス"""
+    id: int
+    user_id: int
+    role_id: int
+    assigned_at: datetime
+    # 役割の詳細情報も含める
+    role: RoleResponse
+
+    class Config:
+        from_attributes = True
+
+
+class UserWithRolesResponse(BaseModel):
+    """ユーザー情報＋割り当てられた役割一覧"""
+    id: int
+    username: str
+    email: str
+    full_name: str
+    role: str  # 'customer' or 'store'
+    is_active: bool
+    created_at: datetime
+    # 店舗ユーザーの場合、割り当てられた役割一覧
+    user_roles: List[UserRoleResponse] = []
+
+    class Config:
+        from_attributes = True
 
 
 # ===== メニュー関連 =====
