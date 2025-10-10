@@ -19,6 +19,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 # パスワードハッシュ化用コンテキスト
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -91,3 +92,45 @@ def verify_token(token: str) -> Optional[str]:
         return username
     except JWTError:
         return None
+
+
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """
+    JWTリフレッシュトークンを作成
+    
+    Args:
+        data: トークンに含めるデータ
+        expires_delta: 有効期限（デフォルト: REFRESH_TOKEN_EXPIRE_DAYS）
+        
+    Returns:
+        str: JWTリフレッシュトークン
+    """
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    
+    to_encode.update({"exp": expire, "type": "refresh"})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def decode_token(token: str) -> Optional[dict]:
+    """
+    JWTトークンを検証しペイロード全体をデコード
+    
+    Args:
+        token: JWTトークン
+        
+    Returns:
+        Optional[dict]: デコードされたペイロード（無効な場合はNone）
+        
+    Raises:
+        JWTError: トークンが無効または期限切れの場合
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        raise
