@@ -10,6 +10,29 @@ from sqlalchemy.sql import func
 from database import Base
 
 
+class Store(Base):
+    """店舗テーブル（マルチテナント対応の中核）"""
+    __tablename__ = "stores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, index=True)
+    address = Column(String(255), nullable=False)
+    phone_number = Column(String(20), nullable=False)
+    email = Column(String(255), nullable=False)
+    opening_time = Column(Time, nullable=False)
+    closing_time = Column(Time, nullable=False)
+    description = Column(Text)
+    image_url = Column(String(500))
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # リレーションシップ
+    users = relationship("User", back_populates="store")
+    menus = relationship("Menu", back_populates="store")
+    orders = relationship("Order", back_populates="store")
+
+
 class User(Base):
     """ユーザーテーブル"""
     __tablename__ = "users"
@@ -21,9 +44,11 @@ class User(Base):
     role = Column(String(50), nullable=False)  # 'customer' or 'store'
     full_name = Column(String(255))
     is_active = Column(Boolean, default=True)
+    store_id = Column(Integer, ForeignKey("stores.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # リレーションシップ
+    store = relationship("Store", back_populates="users")
     orders = relationship("Order", back_populates="user")
     user_roles = relationship("UserRole", back_populates="user")
 
@@ -65,10 +90,12 @@ class Menu(Base):
     description = Column(Text)
     image_url = Column(String(512))
     is_available = Column(Boolean, default=True)
+    store_id = Column(Integer, ForeignKey("stores.id", ondelete="CASCADE"), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # リレーションシップ
+    store = relationship("Store", back_populates="menus")
     orders = relationship("Order", back_populates="menu")
 
 
@@ -79,6 +106,7 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     menu_id = Column(Integer, ForeignKey("menus.id"), nullable=False)
+    store_id = Column(Integer, ForeignKey("stores.id", ondelete="CASCADE"), nullable=False, index=True)
     quantity = Column(Integer, nullable=False)
     total_price = Column(Integer, nullable=False)
     status = Column(String(50), default="pending")  # pending, confirmed, preparing, ready, completed, cancelled
@@ -88,6 +116,7 @@ class Order(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # リレーションシップ
+    store = relationship("Store", back_populates="orders")
     user = relationship("User", back_populates="orders")
     menu = relationship("Menu", back_populates="orders")
 
