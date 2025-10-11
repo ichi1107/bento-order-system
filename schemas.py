@@ -79,7 +79,7 @@ class UserResponse(BaseModel):
     created_at: datetime
     user_roles: List[UserRoleResponse] = []
     
-    # 店舗情報も含める（オプショナル）
+    # 店舗情報も含める(オプショナル)
     store: Optional['StoreResponse'] = None
 
     class Config:
