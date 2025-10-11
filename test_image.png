@@ -1,0 +1,45 @@
+/* 共通スタイル - common.css */
+
+/* リセットCSS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 基本スタイル */
+body {
+    font-family: 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro', 'Yu Gothic Medium', '游ゴシック Medium', YuGothic, '游ゴシック体', 'Meiryo', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f8f9fa;
+    padding-top: 90px !important; /* 固定ヘッダーの高さ分のスペースを確保 */
+}
+
+/* レイアウト */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.main-content {
+    min-height: calc(100vh - 120px);
+    padding: 20px 0;
+}
+
+/* ヘッダー */
+.header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    z-index: 1000 !important;
+    background-color: #007bff;
+    color: white;
+    padding: 1rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header-content {
