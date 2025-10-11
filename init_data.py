@@ -3,7 +3,7 @@
 """
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
-from models import Base, User, Menu, Order, Store
+from models import Base, User, Menu, Order, Store, Role, UserRole
 from auth import get_password_hash
 from datetime import datetime, timedelta, time
 
@@ -42,7 +42,23 @@ def insert_initial_data():
         db.refresh(default_store)
         print(f"    ✓ Default store inserted (ID: {default_store.id})")
         
-        # 2. メニューデータ
+        # 2. 役割データ（店舗スタッフ用）
+        print("  - Inserting roles...")
+        roles_data = [
+            Role(name="owner", description="店舗オーナー - 全ての権限を持つ"),
+            Role(name="manager", description="店舗マネージャー - 注文管理、レポート閲覧が可能"),
+            Role(name="staff", description="店舗スタッフ - 注文管理のみ可能")
+        ]
+        db.add_all(roles_data)
+        db.commit()
+        print(f"    ✓ {len(roles_data)} roles inserted")
+        
+        # roleを取得（後で使用）
+        owner_role = db.query(Role).filter(Role.name == "owner").first()
+        manager_role = db.query(Role).filter(Role.name == "manager").first()
+        staff_role = db.query(Role).filter(Role.name == "staff").first()
+        
+        # 3. メニューデータ
         print("  - Inserting menus...")
         menus = [
             Menu(name="から揚げ弁当", price=500, description="ジューシーなから揚げがたっぷり。", image_url="https://via.placeholder.com/300x200?text=Karaage", store_id=default_store.id),
@@ -56,7 +72,7 @@ def insert_initial_data():
         db.commit()
         print(f"    ✓ {len(menus)} menus inserted")
         
-        # 3. ユーザーデータ
+        # 4. ユーザーデータ
         print("  - Inserting store staff...")
         store_users = [
             User(username="admin", email="admin@bento.com", hashed_password=get_password_hash("admin@123"), role="store", full_name="管理者", store_id=default_store.id),
@@ -66,6 +82,21 @@ def insert_initial_data():
         db.add_all(store_users)
         db.commit()
         print(f"    ✓ {len(store_users)} store staff inserted")
+        
+        # 店舗ユーザーに役割を割り当て
+        print("  - Assigning roles to store staff...")
+        admin_user = db.query(User).filter(User.username == "admin").first()
+        store1_user = db.query(User).filter(User.username == "store1").first()
+        store2_user = db.query(User).filter(User.username == "store2").first()
+        
+        user_roles = [
+            UserRole(user_id=admin_user.id, role_id=owner_role.id),  # admin = owner
+            UserRole(user_id=store1_user.id, role_id=manager_role.id),  # store1 = manager
+            UserRole(user_id=store2_user.id, role_id=staff_role.id)  # store2 = staff
+        ]
+        db.add_all(user_roles)
+        db.commit()
+        print(f"    ✓ {len(user_roles)} role assignments created")
         
         print("  - Inserting customers...")
         customers = [
@@ -79,7 +110,7 @@ def insert_initial_data():
         db.commit()
         print(f"    ✓ {len(customers)} customers inserted")
         
-        # 4. 販売データ
+        # 5. 販売データ
         print("  - Inserting orders...")
         customer_users = db.query(User).filter(User.role == "customer").all()
         menu_items = db.query(Menu).all()
