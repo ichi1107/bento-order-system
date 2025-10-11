@@ -4,6 +4,8 @@
 #
 #    pip-compile requirements.in
 #
+aiosmtplib==2.0.2
+    # via fastapi-mail
 alembic==1.13.2
     # via -r requirements.in
 annotated-types==0.7.0
@@ -15,20 +17,27 @@ anyio==4.6.2
     #   watchfiles
 bcrypt==4.2.0
     # via passlib
+blinker==1.9.0
+    # via fastapi-mail
 build==1.2.2
     # via pip-tools
 certifi==2025.10.5
     # via
     #   httpcore
     #   httpx
+    #   requests
 cffi==1.17.1
     # via cryptography
+charset-normalizer==3.4.3
+    # via requests
 click==8.1.7
     # via
     #   pip-tools
     #   rich-toolkit
     #   typer
     #   uvicorn
+coverage[toml]==7.10.7
+    # via pytest-cov
 cryptography==43.0.1
     # via python-jose
 dnspython==2.6.1
@@ -39,12 +48,17 @@ email-validator==2.2.0
     # via
     #   -r requirements.in
     #   fastapi
+    #   fastapi-mail
 fastapi==0.111.1
     # via -r requirements.in
 fastapi-cli==0.0.13
     # via fastapi
+fastapi-mail==1.4.1
+    # via -r requirements.in
 greenlet==3.2.4
-    # via sqlalchemy
+    # via
+    #   playwright
+    #   sqlalchemy
 h11==0.14.0
     # via
     #   httpcore
@@ -62,12 +76,14 @@ idna==3.10
     #   anyio
     #   email-validator
     #   httpx
+    #   requests
 iniconfig==2.0.0
     # via pytest
 jinja2==3.1.4
     # via
     #   -r requirements.in
     #   fastapi
+    #   fastapi-mail
 mako==1.3.5
     # via alembic
 markdown-it-py==4.0.0
@@ -86,6 +102,8 @@ passlib[bcrypt]==1.7.4
     # via -r requirements.in
 pip-tools==7.4.1
     # via -r requirements.in
+playwright==1.55.0
+    # via -r requirements.in
 pluggy==1.5.0
     # via pytest
 psycopg2-binary==2.9.9
@@ -100,11 +118,17 @@ pydantic==2.9.2
     # via
     #   -r requirements.in
     #   fastapi
+    #   fastapi-mail
+    #   pydantic-settings
     #   pydantic-to-typescript
 pydantic-core==2.23.4
     # via pydantic
+pydantic-settings==2.11.0
+    # via fastapi-mail
 pydantic-to-typescript==1.0.10
     # via -r requirements.in
+pyee==13.0.0
+    # via playwright
 pygments==2.19.2
     # via rich
 pyproject-hooks==1.2.0
@@ -115,11 +139,15 @@ pytest==7.4.3
     # via
     #   -r requirements.in
     #   pytest-asyncio
+    #   pytest-cov
 pytest-asyncio==0.21.2
+    # via -r requirements.in
+pytest-cov==5.0.0
     # via -r requirements.in
 python-dotenv==1.0.1
     # via
     #   -r requirements.in
+    #   pydantic-settings
     #   uvicorn
 python-jose[cryptography]==3.3.0
     # via -r requirements.in
@@ -129,6 +157,8 @@ python-multipart==0.0.12
     #   fastapi
 pyyaml==6.0.2
     # via uvicorn
+requests==2.32.5
+    # via -r requirements.in
 rich==14.2.0
     # via
     #   rich-toolkit
@@ -150,7 +180,9 @@ sqlalchemy==2.0.35
     #   -r requirements.in
     #   alembic
 starlette==0.37.2
-    # via fastapi
+    # via
+    #   fastapi
+    #   fastapi-mail
 typer==0.15.1
     # via fastapi-cli
 typing-extensions==4.12.2
@@ -159,9 +191,15 @@ typing-extensions==4.12.2
     #   fastapi
     #   pydantic
     #   pydantic-core
+    #   pyee
     #   rich-toolkit
     #   sqlalchemy
     #   typer
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via pydantic-settings
+urllib3==2.5.0
+    # via requests
 uvicorn[standard]==0.31.0
     # via
     #   -r requirements.in

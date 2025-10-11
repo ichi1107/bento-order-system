@@ -1,328 +1,329 @@
-// 店舗プロフィール画面のスクリプト
+/**
+ * 店舗プロフィール画面のJavaScriptロジック
+ */
+
+// グローバル変数
+let storeData = null;
+let userRoles = [];
+let isOwner = false;
+let originalImageUrl = null;
+
+// 初期化
 document.addEventListener('DOMContentLoaded', async () => {
-    // 要素の取得
-    const form = document.getElementById('storeProfileForm');
-    const nameInput = document.getElementById('name');
-    const emailInput = document.getElementById('email');
-    const phoneInput = document.getElementById('phone_number');
-    const addressInput = document.getElementById('address');
-    const openingTimeInput = document.getElementById('opening_time');
-    const closingTimeInput = document.getElementById('closing_time');
-    const descriptionInput = document.getElementById('description');
-    const isActiveCheckbox = document.getElementById('is_active');
-    const storeImage = document.getElementById('storeImage');
-    const imageInput = document.getElementById('imageInput');
-    const deleteImageBtn = document.getElementById('deleteImageBtn');
-    const saveBtn = document.getElementById('saveBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const charCount = document.getElementById('charCount');
-    const readonlyNotice = document.getElementById('readonlyNotice');
-    const imageActions = document.getElementById('imageActions');
-    const formActions = document.getElementById('formActions');
+    await loadStoreProfile();
+});
 
-    let currentUser = null;
-    let originalData = null;
-    let isOwner = false;
+/**
+ * 店舗プロフィールを読み込む
+ */
+async function loadStoreProfile() {
+    const loading = document.getElementById('loading');
+    const errorMessage = document.getElementById('error-message');
+    const storeContent = document.getElementById('store-content');
 
-    // ユーザー情報と店舗情報を取得
     try {
-        currentUser = await getCurrentUser();
-        if (!currentUser) {
-            window.location.href = '/login';
+        loading.style.display = 'block';
+        errorMessage.style.display = 'none';
+
+        // 認証チェック
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            // 未ログインの場合はログインページにリダイレクト
+            window.location.href = '/login?redirect=/store/profile';
             return;
         }
 
-        // ユーザーの役割を確認
-        isOwner = currentUser.user_roles?.some(role => role.role.name === 'owner') || false;
+        // ユーザー情報を取得
+        const currentUser = await apiClient.getCurrentUser();
+        userRoles = currentUser.user_roles.map(ur => ur.role.name);
+        isOwner = userRoles.includes('owner');
 
-        // 店舗情報を読み込み
-        await loadStoreProfile();
+        // 店舗情報を取得
+        const response = await apiClient.get('/store/profile');
+        storeData = response;
 
-        // オーナーでない場合は読み取り専用にする
-        if (!isOwner) {
-            setReadOnly();
-        }
+        // 画面を表示
+        displayStoreInfo(storeData);
+        setupFormBehavior();
+
+        loading.style.display = 'none';
+        storeContent.style.display = 'block';
+
     } catch (error) {
-        console.error('初期化エラー:', error);
-        showError('ページの読み込み中にエラーが発生しました');
-    }
-
-    // 店舗情報の読み込み
-    async function loadStoreProfile() {
-        try {
-            const response = await fetch('/api/store/profile', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('店舗情報の取得に失敗しました');
-            }
-
-            const data = await response.json();
-            originalData = { ...data };
-
-            // フォームに値を設定
-            nameInput.value = data.name || '';
-            emailInput.value = data.email || '';
-            phoneInput.value = data.phone_number || '';
-            addressInput.value = data.address || '';
-            openingTimeInput.value = data.opening_time || '';
-            closingTimeInput.value = data.closing_time || '';
-            descriptionInput.value = data.description || '';
-            isActiveCheckbox.checked = data.is_active || false;
-
-            // 店舗画像
-            if (data.image_url) {
-                storeImage.src = data.image_url;
-            }
-
-            updateCharCount();
-        } catch (error) {
-            console.error('店舗情報の読み込みエラー:', error);
-            showError(error.message);
-        }
-    }
-
-    // 読み取り専用モードに設定
-    function setReadOnly() {
-        readonlyNotice.style.display = 'block';
-        imageActions.style.display = 'none';
-        formActions.style.display = 'none';
-
-        // すべての入力を無効化
-        nameInput.disabled = true;
-        emailInput.disabled = true;
-        phoneInput.disabled = true;
-        addressInput.disabled = true;
-        openingTimeInput.disabled = true;
-        closingTimeInput.disabled = true;
-        descriptionInput.disabled = true;
-        isActiveCheckbox.disabled = true;
-    }
-
-    // 文字数カウント更新
-    function updateCharCount() {
-        charCount.textContent = descriptionInput.value.length;
-    }
-
-    descriptionInput.addEventListener('input', updateCharCount);
-
-    // フォーム送信
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        if (!isOwner) {
-            showError('オーナーのみが店舗情報を編集できます');
+        loading.style.display = 'none';
+        
+        // 401エラーの場合はログインページにリダイレクト
+        if (error.message && error.message.includes('401')) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            window.location.href = '/login?redirect=/store/profile';
             return;
         }
+        
+        errorMessage.style.display = 'block';
+        document.getElementById('error-text').textContent = 
+            `エラーが発生しました: ${error.message || '店舗情報を読み込めませんでした'}`;
+        console.error('Error loading store profile:', error);
+    }
+}
 
-        // バリデーション
-        if (!validateForm()) {
-            return;
+/**
+ * 店舗情報を画面に表示
+ */
+function displayStoreInfo(store) {
+    // 画像
+    const storeImage = document.getElementById('store-image');
+    if (store.image_url) {
+        storeImage.src = store.image_url;
+        originalImageUrl = store.image_url;
+        if (isOwner) {
+            document.getElementById('delete-image-button').style.display = 'inline-block';
         }
+    } else {
+        storeImage.src = '/static/images/no-image.svg';
+        originalImageUrl = null;
+        document.getElementById('delete-image-button').style.display = 'none';
+    }
 
+    // 基本情報
+    document.getElementById('store-name').value = store.name || '';
+    document.getElementById('store-email').value = store.email || '';
+    document.getElementById('store-phone').value = store.phone_number || '';
+    document.getElementById('store-address').value = store.address || '';
+
+    // 営業時間
+    document.getElementById('opening-time').value = store.opening_time || '';
+    document.getElementById('closing-time').value = store.closing_time || '';
+
+    // 説明
+    document.getElementById('store-description').value = store.description || '';
+
+    // ステータス
+    document.getElementById('store-active').checked = store.is_active;
+
+    // メタ情報
+    document.getElementById('created-at').textContent = formatDateTime(store.created_at);
+    document.getElementById('updated-at').textContent = formatDateTime(store.updated_at);
+}
+
+/**
+ * フォームの動作を設定
+ */
+function setupFormBehavior() {
+    const form = document.getElementById('store-form');
+    const inputs = form.querySelectorAll('input, textarea');
+    const saveButtonSection = document.getElementById('save-button-section');
+    const readonlyMessage = document.getElementById('readonly-message');
+    const imageUploadSection = document.getElementById('image-upload-section');
+    const imageFile = document.getElementById('image-file');
+    const deleteImageButton = document.getElementById('delete-image-button');
+    const cancelButton = document.getElementById('cancel-button');
+
+    if (isOwner) {
+        // オーナー: 編集可能
+        inputs.forEach(input => input.disabled = false);
+        saveButtonSection.style.display = 'flex';
+        imageUploadSection.style.display = 'block';
+        document.getElementById('page-description').textContent = '店舗の基本情報を確認・編集';
+
+        // フォーム送信
+        form.addEventListener('submit', handleFormSubmit);
+
+        // キャンセルボタン
+        cancelButton.addEventListener('click', () => {
+            if (confirm('変更を破棄してもよろしいですか?')) {
+                displayStoreInfo(storeData);
+            }
+        });
+
+        // 画像アップロード
+        imageFile.addEventListener('change', handleImageUpload);
+
+        // 画像削除
+        deleteImageButton.addEventListener('click', handleImageDelete);
+
+    } else {
+        // マネージャー/スタッフ: 読み取り専用
+        inputs.forEach(input => input.disabled = true);
+        readonlyMessage.style.display = 'block';
+        document.getElementById('page-description').textContent = '店舗の基本情報を確認（読み取り専用）';
+    }
+}
+
+/**
+ * フォーム送信処理
+ */
+async function handleFormSubmit(event) {
+    event.preventDefault();
+
+    const saveButton = document.getElementById('save-button');
+    const originalText = saveButton.textContent;
+
+    try {
+        saveButton.disabled = true;
+        saveButton.textContent = '保存中...';
+
+        // フォームデータを収集
         const formData = {
-            name: nameInput.value,
-            email: emailInput.value || null,
-            phone_number: phoneInput.value || null,
-            address: addressInput.value || null,
-            opening_time: openingTimeInput.value,
-            closing_time: closingTimeInput.value,
-            description: descriptionInput.value || null,
-            is_active: isActiveCheckbox.checked
+            name: document.getElementById('store-name').value.trim(),
+            email: document.getElementById('store-email').value.trim() || null,
+            phone_number: document.getElementById('store-phone').value.trim() || null,
+            address: document.getElementById('store-address').value.trim() || null,
+            opening_time: document.getElementById('opening-time').value || null,
+            closing_time: document.getElementById('closing-time').value || null,
+            description: document.getElementById('store-description').value.trim() || null,
+            is_active: document.getElementById('store-active').checked
         };
 
-        try {
-            const response = await fetch('/api/store/profile', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                },
-                body: JSON.stringify(formData)
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || '更新に失敗しました');
-            }
-
-            const updatedData = await response.json();
-            originalData = { ...updatedData };
-
-            showSuccess('店舗情報を更新しました');
-        } catch (error) {
-            console.error('更新エラー:', error);
-            showError(error.message);
-        }
-    });
-
-    // フォームのバリデーション
-    function validateForm() {
-        let isValid = true;
-
-        // エラーメッセージをクリア
-        clearErrors();
-
-        // 店舗名
-        if (!nameInput.value.trim()) {
-            showFieldError('nameError', '店舗名は必須です');
-            isValid = false;
+        // バリデーション
+        if (!formData.name) {
+            throw new Error('店舗名は必須です');
         }
 
-        // 営業時間
-        if (!openingTimeInput.value) {
-            showFieldError('openingTimeError', '開店時刻は必須です');
-            isValid = false;
+        if (formData.description && formData.description.length > 1000) {
+            throw new Error('説明文は1000文字以内で入力してください');
         }
 
-        if (!closingTimeInput.value) {
-            showFieldError('closingTimeError', '閉店時刻は必須です');
-            isValid = false;
-        }
+        // API呼び出し
+        const response = await apiClient.put('/store/profile', formData);
+        storeData = response;
 
-        // 説明文の長さチェック
-        if (descriptionInput.value.length > 1000) {
-            showFieldError('descriptionError', '説明文は1000文字以内で入力してください');
-            isValid = false;
-        }
+        // 成功メッセージを表示
+        showSuccessMessage('店舗情報を更新しました');
 
-        return isValid;
+        // 画面を更新
+        displayStoreInfo(storeData);
+
+    } catch (error) {
+        showErrorMessage(error.message || '更新に失敗しました');
+        console.error('Error updating store profile:', error);
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = originalText;
+    }
+}
+
+/**
+ * 画像アップロード処理
+ */
+async function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // ファイル形式チェック
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+        showErrorMessage('JPEG, PNG, GIF, WebP 形式の画像のみアップロードできます');
+        event.target.value = '';
+        return;
     }
 
-    // フィールドエラーの表示
-    function showFieldError(elementId, message) {
-        const errorElement = document.getElementById(elementId);
-        if (errorElement) {
-            errorElement.textContent = message;
-        }
+    // ファイルサイズチェック（5MB）
+    if (file.size > 5 * 1024 * 1024) {
+        showErrorMessage('画像サイズは5MB以下にしてください');
+        event.target.value = '';
+        return;
     }
 
-    // エラーのクリア
-    function clearErrors() {
-        const errorElements = document.querySelectorAll('.error-message');
-        errorElements.forEach(el => {
-            el.textContent = '';
-        });
-    }
-
-    // 画像アップロード
-    imageInput.addEventListener('change', async (e) => {
-        if (!isOwner) {
-            showError('オーナーのみが画像を変更できます');
-            return;
-        }
-
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // ファイルサイズチェック (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showError('画像ファイルは5MB以下にしてください');
-            return;
-        }
-
+    try {
+        // FormDataを作成
         const formData = new FormData();
         formData.append('file', file);
 
-        try {
-            const response = await fetch('/api/store/profile/image', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                },
-                body: formData
-            });
+        // API呼び出し
+        const response = await apiClient.uploadImage('/store/profile/image', formData);
+        storeData = response;
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || '画像のアップロードに失敗しました');
-            }
+        // 画像を更新
+        document.getElementById('store-image').src = response.image_url;
+        originalImageUrl = response.image_url;
+        document.getElementById('delete-image-button').style.display = 'inline-block';
 
-            const data = await response.json();
-            storeImage.src = data.image_url;
-            showSuccess('画像を更新しました');
-        } catch (error) {
-            console.error('画像アップロードエラー:', error);
-            showError(error.message);
-        }
-    });
+        showSuccessMessage('画像をアップロードしました');
 
-    // 画像削除
-    deleteImageBtn.addEventListener('click', async () => {
-        if (!isOwner) {
-            showError('オーナーのみが画像を削除できます');
-            return;
-        }
+    } catch (error) {
+        showErrorMessage(error.message || '画像のアップロードに失敗しました');
+        console.error('Error uploading image:', error);
+    } finally {
+        event.target.value = '';
+    }
+}
 
-        if (!confirm('店舗画像を削除しますか?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/store/profile/image', {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || '画像の削除に失敗しました');
-            }
-
-            storeImage.src = '/static/images/default-store.png';
-            showSuccess('画像を削除しました');
-        } catch (error) {
-            console.error('画像削除エラー:', error);
-            showError(error.message);
-        }
-    });
-
-    // キャンセルボタン
-    cancelBtn.addEventListener('click', () => {
-        if (originalData) {
-            nameInput.value = originalData.name || '';
-            emailInput.value = originalData.email || '';
-            phoneInput.value = originalData.phone_number || '';
-            addressInput.value = originalData.address || '';
-            openingTimeInput.value = originalData.opening_time || '';
-            closingTimeInput.value = originalData.closing_time || '';
-            descriptionInput.value = originalData.description || '';
-            isActiveCheckbox.checked = originalData.is_active || false;
-
-            if (originalData.image_url) {
-                storeImage.src = originalData.image_url;
-            }
-
-            clearErrors();
-            updateCharCount();
-        }
-    });
-
-    // 成功メッセージの表示
-    function showSuccess(message) {
-        const successMsg = document.getElementById('successMessage');
-        successMsg.querySelector('p').textContent = `✓ ${message}`;
-        successMsg.style.display = 'block';
-        setTimeout(() => {
-            successMsg.style.display = 'none';
-        }, 3000);
+/**
+ * 画像削除処理
+ */
+async function handleImageDelete() {
+    if (!confirm('店舗画像を削除してもよろしいですか?')) {
+        return;
     }
 
-    // エラーメッセージの表示
-    function showError(message) {
-        const errorMsg = document.getElementById('errorMessage');
-        document.getElementById('errorText').textContent = message;
-        errorMsg.style.display = 'block';
-        setTimeout(() => {
-            errorMsg.style.display = 'none';
-        }, 5000);
-    }
+    try {
+        const response = await apiClient.delete('/store/profile/image');
+        storeData = response;
 
-    // ログアウト
-    document.getElementById('logoutBtn')?.addEventListener('click', logout);
-});
+        // 画像を更新
+        document.getElementById('store-image').src = '/static/images/no-image.svg';
+        originalImageUrl = null;
+        document.getElementById('delete-image-button').style.display = 'none';
+
+        showSuccessMessage('画像を削除しました');
+
+    } catch (error) {
+        showErrorMessage(error.message || '画像の削除に失敗しました');
+        console.error('Error deleting image:', error);
+    }
+}
+
+/**
+ * 成功メッセージを表示
+ */
+function showSuccessMessage(message) {
+    const successMessage = document.getElementById('success-message');
+    const successText = document.getElementById('success-text');
+    
+    successText.textContent = message;
+    successMessage.style.display = 'block';
+
+    // スクロール
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // 3秒後に非表示
+    setTimeout(() => {
+        successMessage.style.display = 'none';
+    }, 3000);
+}
+
+/**
+ * エラーメッセージを表示
+ */
+function showErrorMessage(message) {
+    const errorMessage = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    
+    errorText.textContent = message;
+    errorMessage.style.display = 'block';
+
+    // スクロール
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // 5秒後に非表示
+    setTimeout(() => {
+        errorMessage.style.display = 'none';
+    }, 5000);
+}
+
+/**
+ * 日時フォーマット
+ */
+function formatDateTime(dateString) {
+    if (!dateString) return '-';
+    
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}年${month}月${day}日 ${hours}:${minutes}`;
+}

@@ -9,17 +9,234 @@ from datetime import datetime, date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, and_
+import os
+import uuid
+from pathlib import Path
 
 from database import get_db
 from dependencies import get_current_store_user, require_role, get_current_active_user
-from models import User, Menu, Order
+from models import User, Menu, Order, Store
 from schemas import (
     MenuCreate, MenuUpdate, MenuResponse, MenuListResponse,
     OrderResponse, OrderListResponse, OrderStatusUpdate, OrderSummary,
-    SalesReportResponse, DailySalesReport, MenuSalesReport
+    SalesReportResponse, DailySalesReport, MenuSalesReport,
+    StoreResponse, StoreUpdate
 )
 
 router = APIRouter(prefix="/store", tags=["店舗"])
+
+
+# ===== 店舗プロフィール管理 =====
+
+@router.get("/profile", response_model=StoreResponse, summary="店舗プロフィール取得")
+def get_store_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_store_user)
+):
+    """
+    ログイン中のユーザーが所属する店舗の情報を取得
+    
+    **必要な権限:** store (owner, manager, staff)
+    
+    **戻り値:**
+    - 店舗の詳細情報
+    
+    **エラー:**
+    - 400: ユーザーが店舗に所属していない
+    - 404: 店舗が見つからない
+    """
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # 店舗情報を取得
+    store = db.query(Store).filter(Store.id == current_user.store_id).first()
+    if not store:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Store not found"
+        )
+    
+    return store
+
+
+@router.put("/profile", response_model=StoreResponse, summary="店舗プロフィール更新")
+def update_store_profile(
+    store_update: StoreUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(['owner']))
+):
+    """
+    店舗情報を更新（オーナー専用）
+    
+    **必要な権限:** owner
+    
+    **パラメータ:**
+    - **store_update**: 更新する店舗情報（部分更新可能）
+    
+    **戻り値:**
+    - 更新後の店舗情報
+    
+    **エラー:**
+    - 400: ユーザーが店舗に所属していない
+    - 403: オーナー権限がない
+    - 404: 店舗が見つからない
+    """
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # 店舗情報を取得
+    store = db.query(Store).filter(Store.id == current_user.store_id).first()
+    if not store:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Store not found"
+        )
+    
+    # 更新データを適用（提供されたフィールドのみ）
+    update_data = store_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(store, field, value)
+    
+    db.commit()
+    db.refresh(store)
+    
+    return store
+
+
+@router.post("/profile/image", response_model=StoreResponse, summary="店舗画像アップロード")
+async def upload_store_image(
+    file: UploadFile = File(..., description="アップロードする画像ファイル"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(['owner']))
+):
+    """
+    店舗画像をアップロード（オーナー専用）
+    
+    **必要な権限:** owner
+    
+    **パラメータ:**
+    - **file**: 画像ファイル（JPEG, PNG, GIF対応）
+    
+    **戻り値:**
+    - 更新後の店舗情報（image_urlが更新される）
+    
+    **エラー:**
+    - 400: ユーザーが店舗に所属していない、または不正なファイル形式
+    - 404: 店舗が見つからない
+    """
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # ファイル形式の検証
+    allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+        )
+    
+    # 店舗情報を取得
+    store = db.query(Store).filter(Store.id == current_user.store_id).first()
+    if not store:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Store not found"
+        )
+    
+    # アップロードディレクトリの作成
+    upload_dir = Path("static/uploads/stores")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 一意のファイル名を生成
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = upload_dir / unique_filename
+    
+    # 古い画像ファイルを削除（存在する場合）
+    if store.image_url and store.image_url.startswith("/static/uploads/"):
+        old_file_path = Path(store.image_url.lstrip('/'))
+        if old_file_path.exists():
+            old_file_path.unlink()
+    
+    # ファイルを保存
+    try:
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save file: {str(e)}"
+        )
+    
+    # データベースのimage_urlを更新
+    store.image_url = f"/static/uploads/stores/{unique_filename}"
+    db.commit()
+    db.refresh(store)
+    
+    return store
+
+
+@router.delete("/profile/image", response_model=StoreResponse, summary="店舗画像削除")
+def delete_store_image(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(['owner']))
+):
+    """
+    店舗画像を削除（オーナー専用）
+    
+    **必要な権限:** owner
+    
+    **戻り値:**
+    - 更新後の店舗情報（image_urlがNullになる）
+    
+    **エラー:**
+    - 400: ユーザーが店舗に所属していない
+    - 404: 店舗が見つからない
+    """
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # 店舗情報を取得
+    store = db.query(Store).filter(Store.id == current_user.store_id).first()
+    if not store:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Store not found"
+        )
+    
+    # 画像ファイルを削除（存在する場合）
+    if store.image_url and store.image_url.startswith("/static/uploads/"):
+        file_path = Path(store.image_url.lstrip('/'))
+        if file_path.exists():
+            try:
+                file_path.unlink()
+            except Exception as e:
+                # ファイル削除に失敗してもDBは更新する
+                pass
+    
+    # データベースのimage_urlをクリア
+    store.image_url = None
+    db.commit()
+    db.refresh(store)
+    
+    return store
 
 
 # ===== ダッシュボード =====

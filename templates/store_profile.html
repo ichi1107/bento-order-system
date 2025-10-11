@@ -9,119 +9,151 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>店舗情報</h1>
-            <div class="header-actions">
-                <a href="/store/dashboard" class="btn-secondary">ダッシュボードに戻る</a>
-                <button id="logoutBtn" class="btn-danger">ログアウト</button>
-            </div>
+        <header class="header">
+            <h1>🏪 店舗管理システム</h1>
+            <nav class="nav">
+                <a href="/store/dashboard" class="nav-link">ダッシュボード</a>
+                <a href="/store/orders" class="nav-link">注文管理</a>
+                <a href="/store/menus" class="nav-link">メニュー管理</a>
+                <a href="/store/reports" class="nav-link">レポート</a>
+                <a href="/store/profile" class="nav-link active">店舗情報</a>
+                <a href="/logout" class="nav-link">ログアウト</a>
+            </nav>
         </header>
 
-        <div class="readonly-notice" id="readonlyNotice" style="display: none;">
-            <p>⚠️ この画面は読み取り専用です。店舗情報の編集はオーナーのみが行えます。</p>
-        </div>
+        <main class="main">
+            <section class="page-header">
+                <h2>🏪 店舗情報</h2>
+                <p id="page-description">店舗の基本情報を確認・編集</p>
+            </section>
 
-        <main class="profile-content">
-            <form id="storeProfileForm">
+            <!-- ローディング表示 -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>読み込み中...</p>
+            </div>
+
+            <!-- エラー表示 -->
+            <div id="error-message" class="error-message" style="display: none;">
+                <p id="error-text"></p>
+            </div>
+
+            <!-- 成功メッセージ -->
+            <div id="success-message" class="success-message" style="display: none;">
+                <p id="success-text"></p>
+            </div>
+
+            <!-- 店舗情報コンテンツ -->
+            <div id="store-content" style="display: none;">
                 <!-- 店舗画像セクション -->
-                <section class="profile-section image-section">
-                    <h2>店舗画像</h2>
+                <section class="store-image-section">
                     <div class="image-container">
-                        <img id="storeImage" src="/static/images/default-store.png" alt="店舗画像" class="store-image">
-                        <div class="image-actions" id="imageActions">
-                            <label for="imageInput" class="btn-primary">画像を変更</label>
-                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
-                            <button type="button" id="deleteImageBtn" class="btn-danger">画像を削除</button>
+                        <img id="store-image" src="/static/images/no-image.svg" alt="店舗画像" class="store-image">
+                        <div id="image-upload-section" class="image-upload-section" style="display: none;">
+                            <label for="image-file" class="upload-button">
+                                📷 画像を変更
+                                <input type="file" id="image-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display: none;">
+                            </label>
+                            <button id="delete-image-button" class="delete-image-button" style="display: none;">
+                                🗑️ 画像を削除
+                            </button>
                         </div>
                     </div>
                 </section>
 
-                <!-- 基本情報セクション -->
-                <section class="profile-section">
-                    <h2>基本情報</h2>
-                    <div class="form-group">
-                        <label for="name">店舗名 <span class="required">*</span></label>
-                        <input type="text" id="name" name="name" required>
-                        <span class="error-message" id="nameError"></span>
-                    </div>
+                <!-- 店舗情報フォーム -->
+                <section class="store-info-section">
+                    <form id="store-form">
+                        <!-- 基本情報 -->
+                        <div class="form-section">
+                            <h3>📋 基本情報</h3>
+                            
+                            <div class="form-group">
+                                <label for="store-name">店舗名 <span class="required">*</span></label>
+                                <input type="text" id="store-name" name="name" class="form-control" required disabled>
+                            </div>
 
-                    <div class="form-group">
-                        <label for="email">メールアドレス</label>
-                        <input type="email" id="email" name="email">
-                        <span class="error-message" id="emailError"></span>
-                    </div>
+                            <div class="form-group">
+                                <label for="store-email">メールアドレス</label>
+                                <input type="email" id="store-email" name="email" class="form-control" disabled>
+                            </div>
 
-                    <div class="form-group">
-                        <label for="phone_number">電話番号</label>
-                        <input type="tel" id="phone_number" name="phone_number">
-                        <span class="error-message" id="phoneError"></span>
-                    </div>
+                            <div class="form-group">
+                                <label for="store-phone">電話番号</label>
+                                <input type="tel" id="store-phone" name="phone_number" class="form-control" disabled>
+                            </div>
 
-                    <div class="form-group">
-                        <label for="address">住所</label>
-                        <input type="text" id="address" name="address">
-                        <span class="error-message" id="addressError"></span>
-                    </div>
-                </section>
-
-                <!-- 営業時間セクション -->
-                <section class="profile-section">
-                    <h2>営業時間</h2>
-                    <div class="time-inputs">
-                        <div class="form-group">
-                            <label for="opening_time">開店時刻 <span class="required">*</span></label>
-                            <input type="time" id="opening_time" name="opening_time" required>
-                            <span class="error-message" id="openingTimeError"></span>
+                            <div class="form-group">
+                                <label for="store-address">住所</label>
+                                <textarea id="store-address" name="address" class="form-control" rows="2" disabled></textarea>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="closing_time">閉店時刻 <span class="required">*</span></label>
-                            <input type="time" id="closing_time" name="closing_time" required>
-                            <span class="error-message" id="closingTimeError"></span>
+                        <!-- 営業時間 -->
+                        <div class="form-section">
+                            <h3>⏰ 営業時間</h3>
+                            
+                            <div class="time-group">
+                                <div class="form-group">
+                                    <label for="opening-time">開店時間</label>
+                                    <input type="time" id="opening-time" name="opening_time" class="form-control" disabled>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="closing-time">閉店時間</label>
+                                    <input type="time" id="closing-time" name="closing_time" class="form-control" disabled>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </section>
 
-                <!-- 説明セクション -->
-                <section class="profile-section">
-                    <h2>店舗説明</h2>
-                    <div class="form-group">
-                        <label for="description">説明文 (最大1000文字)</label>
-                        <textarea id="description" name="description" rows="6" maxlength="1000"></textarea>
-                        <div class="char-count">
-                            <span id="charCount">0</span> / 1000文字
+                        <!-- 店舗説明 -->
+                        <div class="form-section">
+                            <h3>📝 店舗説明</h3>
+                            
+                            <div class="form-group">
+                                <label for="store-description">説明文</label>
+                                <textarea id="store-description" name="description" class="form-control" rows="4" disabled placeholder="店舗の特徴やこだわりをご紹介ください"></textarea>
+                                <small class="form-help">最大1000文字まで</small>
+                            </div>
                         </div>
-                        <span class="error-message" id="descriptionError"></span>
-                    </div>
+
+                        <!-- ステータス -->
+                        <div class="form-section">
+                            <h3>🔄 ステータス</h3>
+                            
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="store-active" name="is_active" disabled>
+                                    <span>店舗を営業中にする</span>
+                                </label>
+                                <small class="form-help">チェックを外すと、お客様からの注文を一時的に受け付けなくなります</small>
+                            </div>
+                        </div>
+
+                        <!-- 保存ボタン（ownerのみ表示） -->
+                        <div id="save-button-section" class="form-actions" style="display: none;">
+                            <button type="button" id="cancel-button" class="button button-secondary">
+                                キャンセル
+                            </button>
+                            <button type="submit" id="save-button" class="button button-primary">
+                                💾 変更を保存
+                            </button>
+                        </div>
+
+                        <!-- 読み取り専用メッセージ（manager/staffに表示） -->
+                        <div id="readonly-message" class="readonly-message" style="display: none;">
+                            <p>ℹ️ この情報はオーナー権限でのみ編集できます</p>
+                        </div>
+                    </form>
                 </section>
 
-                <!-- ステータスセクション -->
-                <section class="profile-section">
-                    <h2>営業ステータス</h2>
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="is_active" name="is_active">
-                            <span>営業中</span>
-                        </label>
-                        <p class="help-text">チェックを外すと、お客様からの注文を受け付けません。</p>
-                    </div>
+                <!-- メタ情報 -->
+                <section class="meta-info">
+                    <p><small>作成日時: <span id="created-at"></span></small></p>
+                    <p><small>最終更新: <span id="updated-at"></span></small></p>
                 </section>
-
-                <!-- フォームアクション -->
-                <div class="form-actions" id="formActions">
-                    <button type="button" id="cancelBtn" class="btn-secondary">キャンセル</button>
-                    <button type="submit" id="saveBtn" class="btn-primary">保存する</button>
-                </div>
-            </form>
+            </div>
         </main>
-
-        <!-- 成功/エラーメッセージ -->
-        <div id="successMessage" class="success-message" style="display: none;">
-            <p>✓ 店舗情報を更新しました</p>
-        </div>
-        <div id="errorMessage" class="error-message-box" style="display: none;">
-            <p id="errorText"></p>
-        </div>
     </div>
 
     <script src="/static/js/common.js"></script>
