@@ -529,7 +529,7 @@ function initializeCommonUI() {
         return;
     }
     
-    // ログアウトボタンの初期化
+    // ログアウトボタン(ID)の初期化
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         // 既存のイベントリスナーを削除（クローンして置き換える）
@@ -538,6 +538,21 @@ function initializeCommonUI() {
         
         // 新しいボタンにイベントリスナーを追加
         newLogoutBtn.addEventListener('click', handleLogout, true);
+        
+        commonUIInitialized = true;
+    }
+    
+    // ログアウトボタン(クラス名)の初期化（店舗管理システム用）
+    const logoutBtnClass = document.querySelector('.logout-btn');
+    if (logoutBtnClass) {
+        logoutBtnClass.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (confirm('ログアウトしますか?')) {
+                Auth.logout();
+            }
+        });
         
         commonUIInitialized = true;
     }

@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ヘッダー情報を表示
     await UI.initializeStoreHeader();
 
+    // 共通UI初期化（ログアウトボタンなど）
+    initializeCommonUI();
+
     // ダッシュボードデータを読み込み
     await loadDashboardData();
 });

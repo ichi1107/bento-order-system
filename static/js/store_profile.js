@@ -16,6 +16,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ヘッダー情報を表示
     await UI.initializeStoreHeader();
 
+    // 共通UI初期化（ログアウトボタンなど）
+    initializeCommonUI();
+
     // 店舗プロフィールを読み込む
     await loadStoreProfile();
 });

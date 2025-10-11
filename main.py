@@ -7,7 +7,7 @@ FastAPI メインアプリケーション
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from routers import auth, customer, store
@@ -62,6 +62,15 @@ async def login_page(request: Request):
 async def register_page(request: Request):
     """新規登録画面"""
     return templates.TemplateResponse("register.html", {"request": request})
+
+
+@app.get("/logout", response_class=HTMLResponse, summary="ログアウト")
+async def logout_page(request: Request):
+    """ログアウト（ログイン画面へリダイレクト）"""
+    response = RedirectResponse(url="/login", status_code=302)
+    # クライアント側でトークンを削除するため、クッキーがあれば削除
+    response.delete_cookie("authToken")
+    return response
 
 
 @app.get("/customer/home", response_class=HTMLResponse, summary="お客様メニュー画面")
