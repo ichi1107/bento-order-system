@@ -57,6 +57,7 @@ class UserResponse(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+    user_roles: List['UserRoleResponse'] = []
 
     class Config:
         from_attributes = True

@@ -513,22 +513,22 @@ class Cart {
         this.updateCartCount();
     }
 
-    // �J�[�g���̑S�A�C�e�����擾
+    // カート内の全アイテムを取得
     getItems() {
         return this.items;
     }
 
-    // �J�[�g���̃A�C�e�������擾
+    // カート内のアイテム数を取得
     getItemCount() {
         return this.items.reduce((total, item) => total + item.quantity, 0);
     }
 
-    // �J�[�g�̍��v���z���擾
+    // カートの合計金額を取得
     getTotalPrice() {
         return this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
     }
 
-    // �J�[�g�A�C�R���̃o�b�W���X�V
+    // カートアイコンのバッジを更新
     updateCartCount() {
         const badge = document.getElementById('cartCount');
         const count = this.getItemCount();
@@ -542,3 +542,46 @@ class Cart {
 
 // グローバルカートインスタンス
 const cart = new Cart();
+
+// ===== 認証関連の共通関数 =====
+
+// 現在のユーザー情報を取得
+async function getCurrentUser() {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        return null;
+    }
+
+    try {
+        const response = await fetch('/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                // トークンが無効な場合はクリア
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('currentUser');
+                return null;
+            }
+            throw new Error('ユーザー情報の取得に失敗しました');
+        }
+
+        const user = await response.json();
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        return user;
+    } catch (error) {
+        console.error('getCurrentUser error:', error);
+        return null;
+    }
+}
+
+// ログアウト処理
+function logout() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('cart');
+    window.location.href = '/login';
+}

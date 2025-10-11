@@ -6,12 +6,12 @@
 
 from typing import List, Optional
 from datetime import datetime, date, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, and_
 
 from database import get_db
-from dependencies import get_current_store_user, require_role
+from dependencies import get_current_store_user, require_role, get_current_active_user
 from models import User, Menu, Order
 from schemas import (
     MenuCreate, MenuUpdate, MenuResponse, MenuListResponse,
@@ -438,3 +438,36 @@ def get_sales_report(
         "total_sales": total_sales,
         "total_orders": total_orders
     }
+
+# ===== 店舗プロフィール管理 =====
+
+@router.get('/profile', summary='店舗プロフィール取得')
+def get_store_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    from models import Store
+    store = db.query(Store).first()
+    if not store:
+        raise HTTPException(status_code=404, detail='Store not found')
+    return store
+
+@router.put('/profile', summary='店舗プロフィール更新')
+def update_store_profile(
+    store_update: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(['owner']))
+):
+    from models import Store
+    store = db.query(Store).first()
+    if not store:
+        raise HTTPException(status_code=404, detail='Store not found')
+    
+    allowed_fields = ['name', 'email', 'phone_number', 'address', 'opening_time', 'closing_time', 'description', 'is_active']
+    for field, value in store_update.items():
+        if field in allowed_fields and value is not None:
+            setattr(store, field, value)
+    
+    db.commit()
+    db.refresh(store)
+    return store
