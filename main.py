@@ -100,6 +100,20 @@ async def store_reports(request: Request):
     return templates.TemplateResponse("store_reports.html", {"request": request})
 
 
+# ===== パスワードリセット画面 =====
+
+@app.get("/password-reset-request", response_class=HTMLResponse, summary="パスワードリセット要求画面")
+async def password_reset_request(request: Request):
+    """パスワードリセット要求画面"""
+    return templates.TemplateResponse("password_reset_request.html", {"request": request})
+
+
+@app.get("/reset-password", response_class=HTMLResponse, summary="パスワード再設定画面")
+async def reset_password(request: Request):
+    """パスワード再設定画面（メール内のリンクから遷移）"""
+    return templates.TemplateResponse("password_reset_confirm.html", {"request": request})
+
+
 # ===== ヘルスチェック =====
 
 @app.get("/health", summary="ヘルスチェック")
