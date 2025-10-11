@@ -120,6 +120,10 @@
     border-top: 1px solid #e9ecef;
 }
 
+.auth-links p {
+    margin: 0.5rem 0;
+}
+
 .auth-links a {
     color: #007bff;
     text-decoration: none;
