@@ -151,9 +151,15 @@ def insert_initial_data():
                 delivery_time_obj = time(hour, minute, second)
             
             order = Order(
-                user_id=order_data["user"].id, menu_id=order_data["menu"].id, store_id=default_store.id,
-                quantity=order_data["quantity"], total_price=total_price, status=order_data["status"],
-                delivery_time=delivery_time_obj, notes=order_data["notes"], ordered_at=ordered_at
+                user_id=order_data["user"].id, 
+                menu_id=order_data["menu"].id, 
+                store_id=default_store.id,
+                quantity=order_data["quantity"],
+                total_price=total_price, 
+                status=order_data["status"], 
+                delivery_time=delivery_time_obj,
+                notes=order_data["notes"], 
+                ordered_at=ordered_at
             )
             orders.append(order)
         
