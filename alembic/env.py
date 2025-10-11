@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # database.py と models.py をインポート
 from database import Base
-from models import User, Menu, Order, Role, UserRole  # すべてのモデルをインポート
+from models import User, Menu, Order, Role, UserRole, Store, PasswordResetToken  # すべてのモデルをインポート
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
