@@ -577,7 +577,7 @@ MIT License
 このプロジェクトへの貢献を歓迎します！
 
 1. Forkしてください
-2. 機能ブランチを作成してください (`git checkout -b feature/amazing-feature`)
+2. 機能ブランチを作成してください (`git switch -c feature/amazing-feature`)
 3. 変更をコミットしてください (`git commit -m 'feat: add amazing feature'`)
 4. ブランチにプッシュしてください (`git push origin feature/amazing-feature`)
 5. Pull Requestを作成してください
@@ -586,4 +586,4 @@ MIT License
 
 📧 **サポート**: 質問がある場合は、GitHubのIssueを作成してください。
 
-🚀 **開発チーム**: このシステムは3-5人のチーム開発を想定して設計されています。
+🚀 **開発チーム**: このシステムは4-5人のチーム開発を想定して設計されています。
