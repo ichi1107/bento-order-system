@@ -175,8 +175,9 @@ class StoreBase(BaseModel):
         # info.data から opening_time を取得
         if 'opening_time' in info.data:
             opening_time = info.data['opening_time']
-            if v <= opening_time:
-                raise ValueError('閉店時刻は開店時刻より後である必要があります')
+            if v == opening_time:
+                raise ValueError('閉店時刻は開店時刻と同じにはできません')
+            # 開店時刻 < 閉店時刻（同日営業）または 開店時刻 > 閉店時刻（翌日営業）を許容
         return v
 
 
