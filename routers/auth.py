@@ -11,7 +11,14 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 from schemas import UserCreate, UserLogin, TokenResponse, UserResponse, SuccessResponse
-from auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from auth import (
+    verify_password, 
+    get_password_hash, 
+    create_access_token, 
+    create_refresh_token,
+    ACCESS_TOKEN_EXPIRE_MINUTES
+)
+from dependencies import get_current_active_user, get_current_user_from_refresh_token
 
 router = APIRouter(prefix="/auth", tags=["認証"])
 
@@ -65,12 +72,12 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse, summary="ログイン")
 def login_for_access_token(user_credentials: UserLogin, db: Session = Depends(get_db)):
     """
-    ユーザーログインしてアクセストークンを取得
+    ユーザーログインしてアクセストークンとリフレッシュトークンを取得
     
     - **username**: ユーザー名
     - **password**: パスワード
     
-    成功時は、アクセストークンとユーザー情報を返します。
+    成功時は、アクセストークン、リフレッシュトークン、ユーザー情報を返します。
     """
     # ユーザーを検索
     user = db.query(User).filter(User.username == user_credentials.username).first()
@@ -86,8 +93,8 @@ def login_for_access_token(user_credentials: UserLogin, db: Session = Depends(ge
     # ユーザーがアクティブか確認
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user account"
         )
     
     # アクセストークンを作成
@@ -96,8 +103,12 @@ def login_for_access_token(user_credentials: UserLogin, db: Session = Depends(ge
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     
+    # リフレッシュトークンを作成
+    refresh_token = create_refresh_token(data={"sub": user.username})
+    
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": user
     }
@@ -110,5 +121,50 @@ def logout():
     
     注意: JWTはステートレスなため、サーバー側では特別な処理は行いません。
     クライアント側でトークンを削除してください。
+    
+    将来的にトークン無効化リスト（ブラックリスト）を実装する場合は、
+    ここでリフレッシュトークンを無効化リストに追加します。
     """
     return {"success": True, "message": "Successfully logged out"}
+
+
+@router.post("/refresh", response_model=TokenResponse, summary="トークンリフレッシュ")
+def refresh_access_token(
+    current_user: User = Depends(get_current_user_from_refresh_token),
+    db: Session = Depends(get_db)
+):
+    """
+    リフレッシュトークンを使用して新しいアクセストークンを取得
+    
+    Authorization: Bearer <refresh_token>
+    
+    成功時は、新しいアクセストークン、リフレッシュトークン、ユーザー情報を返します。
+    """
+    # 新しいアクセストークンを作成
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": current_user.username}, 
+        expires_delta=access_token_expires
+    )
+    
+    # 新しいリフレッシュトークンも作成（セキュリティのため）
+    refresh_token = create_refresh_token(data={"sub": current_user.username})
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "user": current_user
+    }
+
+
+@router.get("/me", response_model=UserResponse, summary="現在のユーザー情報取得")
+def get_current_user_info(current_user: User = Depends(get_current_active_user)):
+    """
+    現在ログイン中のユーザー情報を取得
+    
+    Authorization: Bearer <access_token>
+    
+    認証されたユーザーのプロファイル情報を返します。
+    """
+    return current_user
