@@ -65,6 +65,7 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     """認証トークンのレスポンス"""
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
 
