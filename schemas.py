@@ -437,6 +437,48 @@ class PaginatedResponse(BaseModel):
     pagination: PaginationInfo
 
 
+# ===== 店舗プロフィール =====
+
+class StoreBase(BaseModel):
+    """店舗基本情報"""
+    name: str = Field(..., min_length=1, max_length=100)
+    address: Optional[str] = Field(None, max_length=255)
+    phone_number: Optional[str] = Field(None, max_length=20)
+    email: Optional[EmailStr] = None
+    opening_time: Optional[time] = None
+    closing_time: Optional[time] = None
+    description: Optional[str] = Field(None, max_length=1000)
+    is_active: Optional[bool] = True
+
+
+class StoreCreate(StoreBase):
+    """店舗作成リクエスト"""
+    pass
+
+
+class StoreUpdate(BaseModel):
+    """店舗更新リクエスト（部分更新対応）"""
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    address: Optional[str] = Field(None, max_length=255)
+    phone_number: Optional[str] = Field(None, max_length=20)
+    email: Optional[EmailStr] = None
+    opening_time: Optional[time] = None
+    closing_time: Optional[time] = None
+    description: Optional[str] = Field(None, max_length=1000)
+    is_active: Optional[bool] = None
+
+
+class StoreResponse(StoreBase):
+    """店舗レスポンス"""
+    id: int
+    image_url: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ===== 前方参照の解決 =====
 # StoreResponse の前方参照を解決
 UserResponse.model_rebuild()

@@ -569,8 +569,24 @@ pytest --cov=. --cov-report=html
 
 #### インテグレーションテスト
 APIエンドポイントの動作を検証:
-- `tests/test_customer_orders.py` - 注文履歴API
+- `tests/test_customer_orders.py` - 顧客注文履歴API
+- `tests/test_store_profile.py` - 店舗プロフィール管理API
 - `tests/test_password_reset.py` - パスワードリセットAPI
+
+**店舗プロフィールAPI統合テスト:**
+```bash
+# 店舗プロフィールAPIのすべてのテストを実行
+docker-compose exec web pytest tests/test_store_profile.py -v
+
+# 特定のテストクラスを実行
+docker-compose exec web pytest tests/test_store_profile.py::TestRBACEnforcement -v
+docker-compose exec web pytest tests/test_store_profile.py::TestTenantIsolation -v
+
+# カバレッジレポート付きで実行
+docker-compose exec web pytest tests/test_store_profile.py --cov=routers.store --cov-report=term-missing
+```
+
+テスト結果の詳細は [店舗プロフィールAPIテストレポート](docs/STORE_PROFILE_API_TEST_REPORT.md) を参照してください。
 
 #### E2Eテスト（End-to-End）
 ブラウザを使った実際のユーザー操作を検証:
