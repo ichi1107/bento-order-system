@@ -1,4 +1,4 @@
-git#!/bin/bash
+#!/bin/bash
 set -e
 
 echo "Waiting for database..."
