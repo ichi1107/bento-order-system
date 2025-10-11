@@ -460,11 +460,14 @@ def store_a(db_session):
     """
     テスト用店舗A
     """
+    from datetime import time
     store = Store(
         name="テスト店舗A",
         address="東京都渋谷区1-2-3",
         phone_number="03-1234-5678",
         email="storea@test.com",
+        opening_time=time(9, 0),
+        closing_time=time(21, 0),
         description="テスト用の店舗Aです",
         is_active=True
     )
@@ -479,11 +482,14 @@ def store_b(db_session):
     """
     テスト用店舗B
     """
+    from datetime import time
     store = Store(
         name="テスト店舗B",
         address="東京都新宿区4-5-6",
         phone_number="03-9876-5432",
         email="storeb@test.com",
+        opening_time=time(10, 0),
+        closing_time=time(22, 0),
         description="テスト用の店舗Bです",
         is_active=True
     )
