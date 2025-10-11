@@ -262,8 +262,8 @@ class MenuBase(BaseModel):
 
 
 class MenuCreate(MenuBase):
-    """メニュー作成時のリクエスト"""
-    store_id: int = Field(..., ge=1, description="所属店舗ID")
+    """メニュー作成時のリクエスト（store_idは自動設定）"""
+    pass
 
 
 class MenuUpdate(BaseModel):
