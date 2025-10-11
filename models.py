@@ -90,3 +90,15 @@ class Order(Base):
     # リレーションシップ
     user = relationship("User", back_populates="orders")
     menu = relationship("Menu", back_populates="orders")
+
+
+class PasswordResetToken(Base):
+    """パスワードリセットトークンテーブル"""
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

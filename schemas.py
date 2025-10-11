@@ -70,6 +70,24 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+# ===== パスワードリセット関連 =====
+
+class PasswordResetRequest(BaseModel):
+    """パスワードリセット要求"""
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    """パスワードリセット確認"""
+    token: str
+    new_password: str = Field(..., min_length=6)
+
+
+class PasswordResetResponse(BaseModel):
+    """パスワードリセットレスポンス"""
+    message: str
+
+
 # ===== 役割（Role）関連 =====
 
 class RoleResponse(BaseModel):
