@@ -10,6 +10,13 @@ let originalImageUrl = null;
 
 // 初期化
 document.addEventListener('DOMContentLoaded', async () => {
+    // 認証チェック
+    if (!Auth.requireRole('store')) return;
+
+    // ヘッダー情報を表示
+    await UI.initializeStoreHeader();
+
+    // 店舗プロフィールを読み込む
     await loadStoreProfile();
 });
 

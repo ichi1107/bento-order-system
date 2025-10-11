@@ -218,6 +218,57 @@ class UI {
         }
     }
 
+    /**
+     * 店舗向けヘッダーにユーザー情報と店舗情報を表示
+     */
+    static async initializeStoreHeader() {
+        try {
+            // ユーザー情報を取得
+            const user = await ApiClient.getCurrentUser();
+            
+            // ユーザー名を表示
+            const userNameElement = document.getElementById('userName');
+            if (userNameElement) {
+                userNameElement.textContent = user.full_name || user.username;
+            }
+            
+            // ユーザーロールを表示
+            const userRoleElement = document.getElementById('userRole');
+            if (userRoleElement && user.user_roles && user.user_roles.length > 0) {
+                const roleNames = {
+                    'owner': 'オーナー',
+                    'manager': 'マネージャー',
+                    'staff': 'スタッフ'
+                };
+                const roleName = roleNames[user.user_roles[0].role.name] || user.user_roles[0].role.name;
+                userRoleElement.textContent = roleName;
+            }
+            
+            // 店舗情報を取得して表示
+            if (user.store_id) {
+                try {
+                    const storeProfile = await ApiClient.get('/store/profile');
+                    const storeNameElement = document.getElementById('storeName');
+                    if (storeNameElement && storeProfile.name) {
+                        storeNameElement.textContent = storeProfile.name;
+                    }
+                } catch (error) {
+                    console.error('店舗情報の取得に失敗:', error);
+                    const storeNameElement = document.getElementById('storeName');
+                    if (storeNameElement) {
+                        storeNameElement.textContent = '店舗情報取得エラー';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('ヘッダー情報の取得に失敗:', error);
+            // エラー時はログアウト
+            if (error.message.includes('Not authenticated')) {
+                Auth.logout();
+            }
+        }
+    }
+
     static formatPrice(price) {
         return new Intl.NumberFormat('ja-JP', {
             style: 'currency',
