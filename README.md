@@ -6,6 +6,7 @@
 
 - [概要](#概要)
 - [技術スタック](#技術スタック)
+- [データベーススキーマ](#データベーススキーマ)
 - [プロジェクト構成](#プロジェクト構成)
 - [セットアップ](#セットアップ)
 - [開発ワークフロー](#開発ワークフロー)
@@ -47,12 +48,56 @@
 - **VS Code Dev Containers** - 一貫した開発環境
 - **pip-tools** - Python依存関係管理
 - **pydantic-to-typescript** - 型定義自動生成
+- **Alembic** - データベースマイグレーション管理
+
+## データベーススキーマ
+
+### マルチテナント対応アーキテクチャ
+
+本システムは**店舗ごとにデータを完全分離するマルチテナント設計**を採用しています。
+
+- **店舗分離**: `stores`テーブルを中核に、メニューと注文を`store_id`で店舗ごとに分離
+- **アクセス制御**: 各店舗スタッフは自店舗のデータのみアクセス可能
+- **お客様**: 全店舗のメニューを閲覧・注文可能（`users.store_id`はNULL）
+
+### ER図
+
+詳細なER図とテーブル説明は [docs/ER_DIAGRAM.md](docs/ER_DIAGRAM.md) を参照してください。
+
+主要なテーブル:
+- **stores**: 店舗情報（名前、住所、営業時間など）
+- **users**: ユーザー情報（お客様と店舗スタッフ）
+- **menus**: メニュー情報（各店舗が提供）
+- **orders**: 注文情報（お客様が各店舗に発注）
+- **roles / user_roles**: 店舗スタッフの職位管理（owner, manager, staff）
+
+### マイグレーション管理
+
+データベーススキーマの変更はAlembicで管理されています。
+
+```bash
+# マイグレーションを実行（最新スキーマに更新）
+docker-compose run --rm web alembic upgrade head
+
+# マイグレーションを1つ戻す
+docker-compose run --rm web alembic downgrade -1
+
+# 新しいマイグレーションを生成（models.py変更後）
+docker-compose run --rm web alembic revision --autogenerate -m "description"
+
+# マイグレーション履歴を確認
+docker-compose run --rm web alembic history
+```
 
 ## プロジェクト構成
 
 ```
 bento-order-system/
 ├── 📁 .devcontainer/          # VS Code開発コンテナ設定
+├── 📁 alembic/                # データベースマイグレーション
+│   └── 📁 versions/          # マイグレーションスクリプト
+├── 📁 docs/                   # ドキュメント
+│   └── ER_DIAGRAM.md         # データベースER図
 ├── 📁 routers/                # FastAPI ルーター
 │   ├── auth.py               # 認証エンドポイント
 │   ├── customer.py           # お客様向けAPI
@@ -122,7 +167,13 @@ cp .env.example .env
 # 3. Docker Composeでサービスを起動
 docker-compose up --build
 
-# 4. アクセスURL
+# 4. データベースマイグレーションを実行（初回のみ）
+docker-compose run --rm web alembic upgrade head
+
+# 5. 初期データを投入（オプション）
+docker-compose exec web python init_data.py
+
+# 6. アクセスURL
 # - アプリケーション: http://localhost:8000
 # - MailHog (メールテスト): http://localhost:8025
 # - Swagger API ドキュメント: http://localhost:8000/docs
@@ -518,8 +569,24 @@ pytest --cov=. --cov-report=html
 
 #### インテグレーションテスト
 APIエンドポイントの動作を検証:
-- `tests/test_customer_orders.py` - 注文履歴API
+- `tests/test_customer_orders.py` - 顧客注文履歴API
+- `tests/test_store_profile.py` - 店舗プロフィール管理API
 - `tests/test_password_reset.py` - パスワードリセットAPI
+
+**店舗プロフィールAPI統合テスト:**
+```bash
+# 店舗プロフィールAPIのすべてのテストを実行
+docker-compose exec web pytest tests/test_store_profile.py -v
+
+# 特定のテストクラスを実行
+docker-compose exec web pytest tests/test_store_profile.py::TestRBACEnforcement -v
+docker-compose exec web pytest tests/test_store_profile.py::TestTenantIsolation -v
+
+# カバレッジレポート付きで実行
+docker-compose exec web pytest tests/test_store_profile.py --cov=routers.store --cov-report=term-missing
+```
+
+テスト結果の詳細は [店舗プロフィールAPIテストレポート](docs/STORE_PROFILE_API_TEST_REPORT.md) を参照してください。
 
 #### E2Eテスト（End-to-End）
 ブラウザを使った実際のユーザー操作を検証:

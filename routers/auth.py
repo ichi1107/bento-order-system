@@ -7,10 +7,10 @@
 from datetime import datetime, timedelta, timezone
 import secrets
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from models import User, PasswordResetToken
+from models import User, PasswordResetToken, UserRole
 from schemas import (
     UserCreate, 
     UserLogin, 
@@ -173,7 +173,10 @@ def refresh_access_token(
 
 
 @router.get("/me", response_model=UserResponse, summary="現在のユーザー情報取得")
-def get_current_user_info(current_user: User = Depends(get_current_active_user)):
+def get_current_user_info(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
     """
     現在ログイン中のユーザー情報を取得
     
@@ -181,7 +184,12 @@ def get_current_user_info(current_user: User = Depends(get_current_active_user))
     
     認証されたユーザーのプロファイル情報を返します。
     """
-    return current_user
+    # user_rolesリレーションシップをロード
+    user = db.query(User).options(
+        joinedload(User.user_roles).joinedload(UserRole.role)
+    ).filter(User.id == current_user.id).first()
+    
+    return user
 
 
 @router.post("/password-reset-request", response_model=PasswordResetResponse, summary="パスワードリセット要求")
