@@ -26,12 +26,34 @@ services:
       - SECRET_KEY=your-secret-key-change-this-in-production
       - ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      # MailHog SMTP設定
+      - MAIL_USERNAME=
+      - MAIL_PASSWORD=
+      - MAIL_FROM=noreply@bento-system.com
+      - MAIL_PORT=1025
+      - MAIL_SERVER=mailhog
+      - MAIL_FROM_NAME=Bento Order System
+      - MAIL_STARTTLS=False
+      - MAIL_SSL_TLS=False
+      - MAIL_USE_CREDENTIALS=False
+      - MAIL_VALIDATE_CERTS=False
     volumes:
       - .:/app
     depends_on:
       db:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     command: ["bash", "entrypoint.sh"]
+
+  # MailHog - メール送信テスト用SMTPサーバー
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    logging:
+      driver: "none"  # ログを無効化してコンソールをクリーンに保つ
 
 volumes:
   postgres_data:

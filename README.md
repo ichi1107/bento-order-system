@@ -61,6 +61,7 @@ bento-order-system/
 │   ├── 📁 css/               # スタイルシート（画面別）
 │   │   ├── common.css        # 共通スタイル
 │   │   ├── auth.css          # 認証画面
+│   │   ├── password_reset.css # パスワードリセット画面
 │   │   ├── customer_home.css # お客様メニュー画面
 │   │   ├── customer_orders.css # お客様注文履歴
 │   │   └── store.css         # 店舗画面共通
@@ -69,11 +70,25 @@ bento-order-system/
 │       │   └── api.ts        # 自動生成API型
 │       ├── common.js         # 共通ロジック・APIクライアント
 │       ├── auth.js           # 認証画面
+│       ├── password_reset_request.js  # パスワードリセットリクエスト
+│       ├── password_reset_confirm.js  # パスワードリセット確認
 │       ├── customer_home.js  # お客様メニュー画面
 │       ├── customer_orders.js # お客様注文履歴
 │       ├── store_dashboard.js # 店舗ダッシュボード
 │       └── store_menus.js    # 店舗メニュー管理
 ├── 📁 templates/             # HTMLテンプレート
+│   ├── login.html            # ログイン画面
+│   ├── register.html         # ユーザー登録画面
+│   ├── password_reset_request.html  # パスワードリセットリクエスト
+│   ├── password_reset_confirm.html  # パスワードリセット確認
+│   ├── customer_home.html    # お客様メニュー画面
+│   └── ...                   # その他テンプレート
+├── 📁 tests/                 # テストコード
+│   ├── 📁 e2e/               # E2Eテスト（Playwright）
+│   │   ├── conftest.py       # E2Eテスト用フィクスチャ
+│   │   └── test_password_reset_flow.py  # パスワードリセットE2Eテスト
+│   ├── conftest.py           # 共通テストフィクスチャ
+│   └── test_*.py             # ユニット・統合テスト
 ├── 📁 scripts/               # ユーティリティスクリプト
 │   ├── generate-types.sh     # 型定義生成（Linux/Mac）
 │   └── generate-types.bat    # 型定義生成（Windows）
@@ -81,6 +96,7 @@ bento-order-system/
 ├── 📄 models.py              # SQLAlchemyデータベースモデル
 ├── 📄 database.py            # データベース接続設定
 ├── 📄 auth.py                # JWT認証ロジック
+├── 📄 mail.py                # メール送信機能
 ├── 📄 dependencies.py        # FastAPI依存関数
 ├── 📄 main.py                # FastAPIメインアプリケーション
 ├── 📄 init_data.py           # 初期データ投入スクリプト
@@ -106,9 +122,16 @@ cp .env.example .env
 # 3. Docker Composeでサービスを起動
 docker-compose up --build
 
-# 4. ブラウザでアクセス
-# http://localhost:8000
+# 4. アクセスURL
+# - アプリケーション: http://localhost:8000
+# - MailHog (メールテスト): http://localhost:8025
+# - Swagger API ドキュメント: http://localhost:8000/docs
 ```
+
+**起動されるサービス:**
+- `web`: FastAPIアプリケーション（ポート8000）
+- `db`: PostgreSQLデータベース（ポート5432）
+- `mailhog`: メールテスト用SMTPサーバー（ポート1025, Web UI: 8025）
 
 ### 方法2: VS Code Dev Containers
 
@@ -227,10 +250,43 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 #### 認証
 ```
-POST /api/auth/register  # ユーザー登録
-POST /api/auth/login     # ログイン
-POST /api/auth/logout    # ログアウト
+POST /api/auth/register                # ユーザー登録
+POST /api/auth/login                   # ログイン
+POST /api/auth/logout                  # ログアウト
+POST /api/auth/password-reset-request  # パスワードリセットリクエスト
+POST /api/auth/password-reset-confirm  # パスワードリセット確認
 ```
+
+#### パスワードリセット機能
+
+**お客様向けの使い方:**
+
+1. ログイン画面で「パスワードをお忘れですか?」リンクをクリック
+2. 登録済みのメールアドレスを入力して送信
+3. メールに記載されたリンクをクリック
+4. 新しいパスワードを入力（6文字以上）
+5. パスワードがリセットされ、新しいパスワードでログイン可能
+
+**開発者向け情報:**
+
+- **メールテスト**: 開発環境では[MailHog](https://github.com/mailhog/MailHog)を使用
+  - Web UI: http://localhost:8025
+  - 送信されたメールをブラウザで確認可能
+  - SMTP: localhost:1025
+
+- **セキュリティ機能**:
+  - トークンの有効期限: 1時間
+  - レート制限: 同一メールアドレスへのリクエストは5分間に1回まで
+  - トークンの使い捨て: 一度使用したトークンは再利用不可
+
+- **E2Eテスト実行**:
+  ```bash
+  # Docker環境でE2Eテストを実行
+  docker-compose exec web pytest tests/e2e/ -v
+  
+  # カバレッジ付きで実行
+  docker-compose exec web pytest tests/e2e/ --cov=. --cov-report=html
+  ```
 
 #### お客様向け
 ```
@@ -455,15 +511,40 @@ pytest --cov=. --cov-report=html
 
 ### テストの種類
 
+#### ユニットテスト
+個々の関数やクラスの動作を検証:
+- スキーマのバリデーション
+- ビジネスロジックの正確性
+
 #### インテグレーションテスト
-APIエンドポイントの動作を検証するテスト:
+APIエンドポイントの動作を検証:
 - `tests/test_customer_orders.py` - 注文履歴API
+- `tests/test_password_reset.py` - パスワードリセットAPI
+
+#### E2Eテスト（End-to-End）
+ブラウザを使った実際のユーザー操作を検証:
+- `tests/e2e/test_password_reset_flow.py` - パスワードリセット完全フロー
+- Playwrightを使用したヘッドレスブラウザテスト
+- MailHog APIと連携したメール検証
+
+**E2Eテストの実行:**
+```bash
+# Docker環境でE2Eテストのみ実行
+docker-compose exec web pytest tests/e2e/ -v
+
+# 特定のE2Eテストクラスを実行
+docker-compose exec web pytest tests/e2e/test_password_reset_flow.py::TestPasswordResetFlow -v
+
+# すべてのテスト（ユニット + 統合 + E2E）を実行
+docker-compose exec web pytest -v
+```
 
 #### セキュリティテスト
-認証・認可の動作を検証するテスト:
+認証・認可の動作を検証:
 - 未認証ユーザーのアクセス拒否
 - 他ユーザーのデータへのアクセス防止
 - 無効なトークンの拒否
+- レート制限の動作確認
 
 ### Dockerコンテナ内でのテスト実行
 
