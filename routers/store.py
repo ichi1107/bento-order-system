@@ -251,13 +251,21 @@ def get_dashboard(
     
     **必要な権限:** owner, manager, staff
     """
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
     today = date.today()
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
     
-    # 本日の注文を取得
+    # 本日の注文を取得（自店舗のみ）
     today_orders = db.query(Order).filter(
         and_(
+            Order.store_id == current_user.store_id,  # 店舗フィルタ追加
             Order.ordered_at >= today_start,
             Order.ordered_at <= today_end
         )
@@ -272,9 +280,10 @@ def get_dashboard(
     completed_orders = today_orders.filter(Order.status == "completed").count()
     cancelled_orders = today_orders.filter(Order.status == "cancelled").count()
     
-    # 売上計算（キャンセル除く）
+    # 売上計算（キャンセル除く、自店舗のみ）
     total_sales = db.query(func.sum(Order.total_price)).filter(
         and_(
+            Order.store_id == current_user.store_id,  # 店舗フィルタ追加
             Order.ordered_at >= today_start,
             Order.ordered_at <= today_end,
             Order.status != "cancelled"
@@ -306,7 +315,7 @@ def get_all_orders(
     current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
-    全ての注文一覧を取得
+    全ての注文一覧を取得（自店舗のみ）
     
     - 最新の注文から順に表示
     - ステータスや日付でフィルタリング可能
@@ -314,7 +323,15 @@ def get_all_orders(
     
     **必要な権限:** owner, manager, staff
     """
-    query = db.query(Order)
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # 自店舗の注文のみを取得
+    query = db.query(Order).filter(Order.store_id == current_user.store_id)
     
     # ステータスフィルタ
     if status_filter:
@@ -368,7 +385,7 @@ def update_order_status(
     current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
-    注文のステータスを更新
+    注文のステータスを更新（自店舗の注文のみ）
     
     可能なステータス:
     - pending: 注文受付
@@ -380,7 +397,18 @@ def update_order_status(
     
     **必要な権限:** owner, manager, staff
     """
-    order = db.query(Order).filter(Order.id == order_id).first()
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # 自店舗の注文のみを取得
+    order = db.query(Order).filter(
+        Order.id == order_id,
+        Order.store_id == current_user.store_id  # 店舗フィルタ追加
+    ).first()
     
     if not order:
         raise HTTPException(
@@ -410,11 +438,19 @@ def get_all_menus(
     current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
-    全てのメニュー一覧を取得（管理用）
+    全てのメニュー一覧を取得（自店舗のみ、管理用）
     
     **必要な権限:** owner, manager, staff
     """
-    query = db.query(Menu)
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # 自店舗のメニューのみを取得
+    query = db.query(Menu).filter(Menu.store_id == current_user.store_id)
     
     # 利用可能フラグでフィルタ
     if is_available is not None:
@@ -437,11 +473,19 @@ def create_menu(
     current_user: User = Depends(require_role(['owner', 'manager']))
 ):
     """
-    新しいメニューを作成
+    新しいメニューを作成（自店舗に紐づけ）
     
     **必要な権限:** owner, manager
     """
-    db_menu = Menu(**menu.dict())
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # メニュー作成時に自動的にstore_idを設定
+    db_menu = Menu(**menu.dict(), store_id=current_user.store_id)
     
     db.add(db_menu)
     db.commit()
@@ -458,11 +502,22 @@ def update_menu(
     current_user: User = Depends(require_role(['owner', 'manager']))
 ):
     """
-    既存メニューを更新
+    既存メニューを更新（自店舗のみ）
     
     **必要な権限:** owner, manager
     """
-    menu = db.query(Menu).filter(Menu.id == menu_id).first()
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # 自店舗のメニューのみを取得
+    menu = db.query(Menu).filter(
+        Menu.id == menu_id,
+        Menu.store_id == current_user.store_id  # 店舗フィルタ追加
+    ).first()
     
     if not menu:
         raise HTTPException(
@@ -488,13 +543,24 @@ def delete_menu(
     current_user: User = Depends(require_role(['owner']))
 ):
     """
-    メニューを削除
+    メニューを削除（自店舗のみ）
     
     注意: 既存の注文がある場合は論理削除（is_available = False）を推奨
     
     **必要な権限:** owner
     """
-    menu = db.query(Menu).filter(Menu.id == menu_id).first()
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # 自店舗のメニューのみを取得
+    menu = db.query(Menu).filter(
+        Menu.id == menu_id,
+        Menu.store_id == current_user.store_id  # 店舗フィルタ追加
+    ).first()
     
     if not menu:
         raise HTTPException(
@@ -527,7 +593,7 @@ def get_sales_report(
     current_user: User = Depends(require_role(['owner', 'manager']))
 ):
     """
-    売上レポートを取得
+    売上レポートを取得（自店舗のみ）
     
     - 日別、週別、月別の売上集計
     - メニュー別売上ランキング
@@ -535,6 +601,13 @@ def get_sales_report(
     
     **必要な権限:** owner, manager
     """
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
     # デフォルトの期間設定
     if not start_date:
         if period == "daily":
@@ -557,9 +630,10 @@ def get_sales_report(
             detail="Invalid date format. Use YYYY-MM-DD"
         )
     
-    # 指定期間の注文を取得（キャンセル除く）
+    # 指定期間の注文を取得（自店舗のみ、キャンセル除く）
     orders_query = db.query(Order).filter(
         and_(
+            Order.store_id == current_user.store_id,  # 店舗フィルタ追加
             Order.ordered_at >= start_dt,
             Order.ordered_at <= end_dt,
             Order.status != "cancelled"
@@ -585,18 +659,20 @@ def get_sales_report(
         day_count = day_orders.count()
         day_sales = db.query(func.sum(Order.total_price)).filter(
             and_(
+                Order.store_id == current_user.store_id,  # 店舗フィルタ追加
                 Order.ordered_at >= day_start,
                 Order.ordered_at <= day_end,
                 Order.status != "cancelled"
             )
         ).scalar() or 0
         
-        # 人気メニューを取得
+        # 人気メニューを取得（自店舗のみ）
         popular_menu = db.query(
             Menu.name,
             func.sum(Order.quantity).label("total_quantity")
         ).join(Order).filter(
             and_(
+                Order.store_id == current_user.store_id,  # 店舗フィルタ追加
                 Order.ordered_at >= day_start,
                 Order.ordered_at <= day_end,
                 Order.status != "cancelled"
@@ -612,7 +688,7 @@ def get_sales_report(
         
         current_date += timedelta(days=1)
     
-    # メニュー別売上集計
+    # メニュー別売上集計（自店舗のみ）
     menu_reports = db.query(
         Menu.id,
         Menu.name,
@@ -620,6 +696,7 @@ def get_sales_report(
         func.sum(Order.total_price).label("total_sales")
     ).join(Order).filter(
         and_(
+            Order.store_id == current_user.store_id,  # 店舗フィルタ追加
             Order.ordered_at >= start_dt,
             Order.ordered_at <= end_dt,
             Order.status != "cancelled"
@@ -636,10 +713,11 @@ def get_sales_report(
         for report in menu_reports
     ]
     
-    # 合計集計
+    # 合計集計（自店舗のみ）
     total_orders = orders_query.count()
     total_sales = db.query(func.sum(Order.total_price)).filter(
         and_(
+            Order.store_id == current_user.store_id,  # 店舗フィルタ追加
             Order.ordered_at >= start_dt,
             Order.ordered_at <= end_dt,
             Order.status != "cancelled"

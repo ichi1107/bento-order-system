@@ -51,7 +51,6 @@ class User(Base):
     store = relationship("Store", back_populates="users")
     orders = relationship("Order", back_populates="user")
     user_roles = relationship("UserRole", back_populates="user")
-    store = relationship("Store", back_populates="users")
 
 
 class Role(Base):
@@ -122,24 +121,6 @@ class Order(Base):
     menu = relationship("Menu", back_populates="orders")
 
 
-class Store(Base):
-    """店舗情報テーブル"""
-    __tablename__ = "stores"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    email = Column(String(255))
-    phone_number = Column(String(50))
-    address = Column(String(500))
-    opening_time = Column(Time, nullable=False)
-    closing_time = Column(Time, nullable=False)
-    description = Column(Text)
-    image_url = Column(String(500))
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-
 class PasswordResetToken(Base):
     """パスワードリセットトークンテーブル"""
     __tablename__ = "password_reset_tokens"
@@ -150,24 +131,3 @@ class PasswordResetToken(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-
-class Store(Base):
-    """店舗テーブル"""
-    __tablename__ = "stores"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    email = Column(String(255), nullable=True)
-    phone = Column(String(50), nullable=True)
-    address = Column(Text, nullable=True)
-    opening_time = Column(Time, nullable=False)
-    closing_time = Column(Time, nullable=False)
-    description = Column(Text, nullable=True)
-    image_url = Column(String(512), nullable=True)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-    # リレーションシップ
-    users = relationship("User", back_populates="store")

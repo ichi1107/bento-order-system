@@ -633,3 +633,170 @@ def auth_headers_owner_store_b(client, owner_user_store_b):
     """
     token = get_auth_token(client, "owner_store_b", "password123")
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def manager_user_store_b(db_session, roles, store_b):
+    """
+    店舗Bのマネージャーユーザー
+    """
+    user = User(
+        username="manager_store_b",
+        email="manager_b@test.com",
+        full_name="店舗Bマネージャー",
+        hashed_password=get_password_hash("password123"),
+        role="store",
+        store_id=store_b.id,
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    user_role = UserRole(user_id=user.id, role_id=roles["manager"].id)
+    db_session.add(user_role)
+    db_session.commit()
+    
+    return user
+
+
+@pytest.fixture
+def staff_user_store_b(db_session, roles, store_b):
+    """
+    店舗Bのスタッフユーザー
+    """
+    user = User(
+        username="staff_store_b",
+        email="staff_b@test.com",
+        full_name="店舗Bスタッフ",
+        hashed_password=get_password_hash("password123"),
+        role="store",
+        store_id=store_b.id,
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    user_role = UserRole(user_id=user.id, role_id=roles["staff"].id)
+    db_session.add(user_role)
+    db_session.commit()
+    
+    return user
+
+
+@pytest.fixture
+def auth_headers_manager_store_b(client, manager_user_store_b):
+    """
+    店舗Bマネージャーの認証ヘッダー
+    """
+    token = get_auth_token(client, "manager_store_b", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_staff_store_b(client, staff_user_store_b):
+    """
+    店舗Bスタッフの認証ヘッダー
+    """
+    token = get_auth_token(client, "staff_store_b", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def menu_store_a(db_session, store_a):
+    """
+    店舗Aのメニュー
+    """
+    menu = Menu(
+        name="店舗A特製弁当",
+        price=850,
+        description="店舗A専用のテスト弁当",
+        image_url="https://example.com/menu_a.jpg",
+        is_available=True,
+        store_id=store_a.id
+    )
+    db_session.add(menu)
+    db_session.commit()
+    db_session.refresh(menu)
+    return menu
+
+
+@pytest.fixture
+def menu_store_a_2(db_session, store_a):
+    """
+    店舗Aのメニュー2
+    """
+    menu = Menu(
+        name="店舗Aデラックス弁当",
+        price=1200,
+        description="店舗A専用の高級弁当",
+        image_url="https://example.com/menu_a2.jpg",
+        is_available=True,
+        store_id=store_a.id
+    )
+    db_session.add(menu)
+    db_session.commit()
+    db_session.refresh(menu)
+    return menu
+
+
+@pytest.fixture
+def menu_store_b(db_session, store_b):
+    """
+    店舗Bのメニュー
+    """
+    menu = Menu(
+        name="店舗B特製弁当",
+        price=900,
+        description="店舗B専用のテスト弁当",
+        image_url="https://example.com/menu_b.jpg",
+        is_available=True,
+        store_id=store_b.id
+    )
+    db_session.add(menu)
+    db_session.commit()
+    db_session.refresh(menu)
+    return menu
+
+
+@pytest.fixture
+def order_store_a(db_session, customer_user_a, menu_store_a, store_a):
+    """
+    店舗Aの注文
+    """
+    order = Order(
+        user_id=customer_user_a.id,
+        menu_id=menu_store_a.id,
+        store_id=store_a.id,
+        quantity=2,
+        total_price=menu_store_a.price * 2,
+        status="pending",
+        ordered_at=datetime.utcnow(),
+        notes="店舗Aへの注文"
+    )
+    db_session.add(order)
+    db_session.commit()
+    db_session.refresh(order)
+    return order
+
+
+@pytest.fixture
+def order_store_b(db_session, customer_user_b, menu_store_b, store_b):
+    """
+    店舗Bの注文
+    """
+    order = Order(
+        user_id=customer_user_b.id,
+        menu_id=menu_store_b.id,
+        store_id=store_b.id,
+        quantity=1,
+        total_price=menu_store_b.price * 1,
+        status="confirmed",
+        ordered_at=datetime.utcnow(),
+        notes="店舗Bへの注文"
+    )
+    db_session.add(order)
+    db_session.commit()
+    db_session.refresh(order)
+    return order
