@@ -94,10 +94,22 @@ async def store_menus(request: Request):
     return templates.TemplateResponse("store_menus.html", {"request": request})
 
 
+@app.get("/store/profile", response_class=HTMLResponse, summary="店舗プロフィール画面")
+async def store_profile(request: Request):
+    """店舗プロフィール画面"""
+    return templates.TemplateResponse("store_profile.html", {"request": request})
+
+
 @app.get("/store/reports", response_class=HTMLResponse, summary="店舗売上レポート画面")
 async def store_reports(request: Request):
     """店舗向け売上レポート画面"""
     return templates.TemplateResponse("store_reports.html", {"request": request})
+
+
+@app.get("/store/profile", response_class=HTMLResponse, summary="店舗情報管理画面")
+async def store_profile(request: Request):
+    """店舗向け情報管理画面"""
+    return templates.TemplateResponse("store_profile.html", {"request": request})
 
 
 # ===== パスワードリセット画面 =====

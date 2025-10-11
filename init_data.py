@@ -3,7 +3,7 @@
 """
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
-from models import Base, User, Menu, Order, Store
+from models import Base, User, Menu, Order, Store, Role, UserRole
 from auth import get_password_hash
 from datetime import datetime, timedelta, time
 
@@ -24,24 +24,41 @@ def insert_initial_data():
         
         print("Inserting initial data...")
         
-        # 0. デフォルト店舗データ
+        # 1. デフォルト店舗データ
         print("  - Inserting default store...")
         default_store = Store(
-            name="本店",
-            address="東京都渋谷区サンプル1-2-3",
+            name="本店 - 弁当屋さん",
+            address="東京都渋谷区1-2-3",
             phone_number="03-1234-5678",
             email="honten@bento.com",
             opening_time=time(9, 0),
             closing_time=time(20, 0),
-            description="当店の本店です。美味しい弁当を提供しています。",
+            description="美味しい弁当をお届けする本店です。",
+            image_url="https://via.placeholder.com/600x400?text=Main+Store",
             is_active=True
         )
         db.add(default_store)
         db.commit()
         db.refresh(default_store)
-        print(f"    ✓ Default store created (ID: {default_store.id})")
+        print(f"    ✓ Default store inserted (ID: {default_store.id})")
         
-        # 1. メニューデータ
+        # 2. 役割データ（店舗スタッフ用）
+        print("  - Inserting roles...")
+        roles_data = [
+            Role(name="owner", description="店舗オーナー - 全ての権限を持つ"),
+            Role(name="manager", description="店舗マネージャー - 注文管理、レポート閲覧が可能"),
+            Role(name="staff", description="店舗スタッフ - 注文管理のみ可能")
+        ]
+        db.add_all(roles_data)
+        db.commit()
+        print(f"    ✓ {len(roles_data)} roles inserted")
+        
+        # roleを取得（後で使用）
+        owner_role = db.query(Role).filter(Role.name == "owner").first()
+        manager_role = db.query(Role).filter(Role.name == "manager").first()
+        staff_role = db.query(Role).filter(Role.name == "staff").first()
+        
+        # 3. メニューデータ
         print("  - Inserting menus...")
         menus = [
             Menu(name="から揚げ弁当", price=500, description="ジューシーなから揚げがたっぷり。", image_url="https://via.placeholder.com/300x200?text=Karaage", store_id=default_store.id),
@@ -55,7 +72,7 @@ def insert_initial_data():
         db.commit()
         print(f"    ✓ {len(menus)} menus inserted")
         
-        # 2. ユーザーデータ
+        # 4. ユーザーデータ
         print("  - Inserting store staff...")
         store_users = [
             User(username="admin", email="admin@bento.com", hashed_password=get_password_hash("admin@123"), role="store", full_name="管理者", store_id=default_store.id),
@@ -65,6 +82,21 @@ def insert_initial_data():
         db.add_all(store_users)
         db.commit()
         print(f"    ✓ {len(store_users)} store staff inserted")
+        
+        # 店舗ユーザーに役割を割り当て
+        print("  - Assigning roles to store staff...")
+        admin_user = db.query(User).filter(User.username == "admin").first()
+        store1_user = db.query(User).filter(User.username == "store1").first()
+        store2_user = db.query(User).filter(User.username == "store2").first()
+        
+        user_roles = [
+            UserRole(user_id=admin_user.id, role_id=owner_role.id),  # admin = owner
+            UserRole(user_id=store1_user.id, role_id=manager_role.id),  # store1 = manager
+            UserRole(user_id=store2_user.id, role_id=staff_role.id)  # store2 = staff
+        ]
+        db.add_all(user_roles)
+        db.commit()
+        print(f"    ✓ {len(user_roles)} role assignments created")
         
         print("  - Inserting customers...")
         customers = [
@@ -78,7 +110,7 @@ def insert_initial_data():
         db.commit()
         print(f"    ✓ {len(customers)} customers inserted")
         
-        # 3. 販売データ
+        # 5. 販売データ
         print("  - Inserting orders...")
         customer_users = db.query(User).filter(User.role == "customer").all()
         menu_items = db.query(Menu).all()

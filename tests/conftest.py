@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from main import app
 from database import Base, get_db
-from models import User, Menu, Order, Role, UserRole
+from models import User, Menu, Order, Role, UserRole, Store
 from auth import get_password_hash
 from datetime import datetime, timedelta
 
@@ -450,4 +450,186 @@ def auth_headers_staff(client, staff_user):
     スタッフユーザーの認証ヘッダー
     """
     token = get_auth_token(client, "staff_user", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+# ===== 店舗関連フィクスチャ =====
+
+@pytest.fixture
+def store_a(db_session):
+    """
+    テスト用店舗A
+    """
+    from datetime import time
+    store = Store(
+        name="テスト店舗A",
+        address="東京都渋谷区1-2-3",
+        phone_number="03-1234-5678",
+        email="storea@test.com",
+        opening_time=time(9, 0),
+        closing_time=time(21, 0),
+        description="テスト用の店舗Aです",
+        is_active=True
+    )
+    db_session.add(store)
+    db_session.commit()
+    db_session.refresh(store)
+    return store
+
+
+@pytest.fixture
+def store_b(db_session):
+    """
+    テスト用店舗B
+    """
+    from datetime import time
+    store = Store(
+        name="テスト店舗B",
+        address="東京都新宿区4-5-6",
+        phone_number="03-9876-5432",
+        email="storeb@test.com",
+        opening_time=time(10, 0),
+        closing_time=time(22, 0),
+        description="テスト用の店舗Bです",
+        is_active=True
+    )
+    db_session.add(store)
+    db_session.commit()
+    db_session.refresh(store)
+    return store
+
+
+@pytest.fixture
+def owner_user_store_a(db_session, roles, store_a):
+    """
+    店舗Aのオーナーユーザー
+    """
+    user = User(
+        username="owner_store_a",
+        email="owner_a@test.com",
+        full_name="店舗Aオーナー",
+        hashed_password=get_password_hash("password123"),
+        role="store",
+        store_id=store_a.id,
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    user_role = UserRole(user_id=user.id, role_id=roles["owner"].id)
+    db_session.add(user_role)
+    db_session.commit()
+    
+    return user
+
+
+@pytest.fixture
+def manager_user_store_a(db_session, roles, store_a):
+    """
+    店舗Aのマネージャーユーザー
+    """
+    user = User(
+        username="manager_store_a",
+        email="manager_a@test.com",
+        full_name="店舗Aマネージャー",
+        hashed_password=get_password_hash("password123"),
+        role="store",
+        store_id=store_a.id,
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    user_role = UserRole(user_id=user.id, role_id=roles["manager"].id)
+    db_session.add(user_role)
+    db_session.commit()
+    
+    return user
+
+
+@pytest.fixture
+def staff_user_store_a(db_session, roles, store_a):
+    """
+    店舗Aのスタッフユーザー
+    """
+    user = User(
+        username="staff_store_a",
+        email="staff_a@test.com",
+        full_name="店舗Aスタッフ",
+        hashed_password=get_password_hash("password123"),
+        role="store",
+        store_id=store_a.id,
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    user_role = UserRole(user_id=user.id, role_id=roles["staff"].id)
+    db_session.add(user_role)
+    db_session.commit()
+    
+    return user
+
+
+@pytest.fixture
+def owner_user_store_b(db_session, roles, store_b):
+    """
+    店舗Bのオーナーユーザー
+    """
+    user = User(
+        username="owner_store_b",
+        email="owner_b@test.com",
+        full_name="店舗Bオーナー",
+        hashed_password=get_password_hash("password123"),
+        role="store",
+        store_id=store_b.id,
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    user_role = UserRole(user_id=user.id, role_id=roles["owner"].id)
+    db_session.add(user_role)
+    db_session.commit()
+    
+    return user
+
+
+@pytest.fixture
+def auth_headers_owner_store_a(client, owner_user_store_a):
+    """
+    店舗Aオーナーの認証ヘッダー
+    """
+    token = get_auth_token(client, "owner_store_a", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_manager_store_a(client, manager_user_store_a):
+    """
+    店舗Aマネージャーの認証ヘッダー
+    """
+    token = get_auth_token(client, "manager_store_a", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_staff_store_a(client, staff_user_store_a):
+    """
+    店舗Aスタッフの認証ヘッダー
+    """
+    token = get_auth_token(client, "staff_store_a", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_owner_store_b(client, owner_user_store_b):
+    """
+    店舗Bオーナーの認証ヘッダー
+    """
+    token = get_auth_token(client, "owner_store_b", "password123")
     return {"Authorization": f"Bearer {token}"}
