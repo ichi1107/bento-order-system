@@ -21,11 +21,13 @@ class User(Base):
     role = Column(String(50), nullable=False)  # 'customer' or 'store'
     full_name = Column(String(255))
     is_active = Column(Boolean, default=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # リレーションシップ
     orders = relationship("Order", back_populates="user")
     user_roles = relationship("UserRole", back_populates="user")
+    store = relationship("Store", back_populates="users")
 
 
 class Role(Base):
@@ -90,6 +92,27 @@ class Order(Base):
     # リレーションシップ
     user = relationship("User", back_populates="orders")
     menu = relationship("Menu", back_populates="orders")
+
+
+class Store(Base):
+    """店舗テーブル"""
+    __tablename__ = "stores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    address = Column(String(255))
+    phone_number = Column(String(20))
+    email = Column(String(255))
+    opening_time = Column(Time)
+    closing_time = Column(Time)
+    description = Column(Text)
+    image_url = Column(String(512))
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # リレーションシップ
+    users = relationship("User", back_populates="store")
 
 
 class PasswordResetToken(Base):
