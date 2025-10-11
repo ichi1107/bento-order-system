@@ -48,6 +48,24 @@ class UserLogin(BaseModel):
     password: str
 
 
+class RoleResponse(BaseModel):
+    """ロール情報のレスポンス"""
+    id: int
+    name: str
+    
+    class Config:
+        from_attributes = True
+
+
+class UserRoleResponse(BaseModel):
+    """ユーザーロール情報のレスポンス"""
+    id: int
+    role: RoleResponse
+    
+    class Config:
+        from_attributes = True
+
+
 class UserResponse(BaseModel):
     """ユーザー情報のレスポンス"""
     id: int
@@ -57,6 +75,7 @@ class UserResponse(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+    user_roles: List[UserRoleResponse] = []
 
     class Config:
         from_attributes = True
@@ -332,3 +351,43 @@ class PaginationInfo(BaseModel):
 class PaginatedResponse(BaseModel):
     """ページネーション付きレスポンスの基底クラス"""
     pagination: PaginationInfo
+
+
+# ===== 店舗情報関連 =====
+
+class StoreBase(BaseModel):
+    """店舗情報の基底スキーマ"""
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(None, max_length=50)
+    address: Optional[str] = None
+    opening_time: Optional[time] = None
+    closing_time: Optional[time] = None
+    description: Optional[str] = Field(None, max_length=1000)
+    is_active: Optional[bool] = None
+
+
+class StoreCreate(StoreBase):
+    """店舗作成時のリクエスト"""
+    name: str = Field(..., min_length=1, max_length=255)
+    opening_time: time = Field(..., description="開店時間")
+    closing_time: time = Field(..., description="閉店時間")
+
+
+class StoreUpdate(StoreBase):
+    """店舗更新時のリクエスト"""
+    pass
+
+
+class StoreResponse(StoreBase):
+    """店舗情報のレスポンス"""
+    id: int
+    name: str
+    opening_time: time
+    closing_time: time
+    image_url: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
