@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, and_
 
 from database import get_db
-from dependencies import get_current_store_user
+from dependencies import get_current_store_user, require_role
 from models import User, Menu, Order
 from schemas import (
     MenuCreate, MenuUpdate, MenuResponse, MenuListResponse,
@@ -27,10 +27,12 @@ router = APIRouter(prefix="/store", tags=["店舗"])
 @router.get("/dashboard", response_model=OrderSummary, summary="ダッシュボード情報取得")
 def get_dashboard(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_store_user)
+    current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
     本日の注文状況サマリーを取得
+    
+    **必要な権限:** owner, manager, staff
     """
     today = date.today()
     today_start = datetime.combine(today, datetime.min.time())
@@ -84,7 +86,7 @@ def get_all_orders(
     page: int = Query(1, ge=1, description="ページ番号"),
     per_page: int = Query(20, ge=1, le=100, description="1ページあたりの件数"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_store_user)
+    current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
     全ての注文一覧を取得
@@ -92,6 +94,8 @@ def get_all_orders(
     - 最新の注文から順に表示
     - ステータスや日付でフィルタリング可能
     - ユーザー情報とメニュー情報を含む
+    
+    **必要な権限:** owner, manager, staff
     """
     query = db.query(Order)
     
@@ -144,7 +148,7 @@ def update_order_status(
     order_id: int,
     status_update: OrderStatusUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_store_user)
+    current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
     注文のステータスを更新
@@ -156,6 +160,8 @@ def update_order_status(
     - ready: 受取準備完了
     - completed: 受取完了
     - cancelled: キャンセル
+    
+    **必要な権限:** owner, manager, staff
     """
     order = db.query(Order).filter(Order.id == order_id).first()
     
@@ -184,10 +190,12 @@ def get_all_menus(
     page: int = Query(1, ge=1, description="ページ番号"),
     per_page: int = Query(20, ge=1, le=100, description="1ページあたりの件数"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_store_user)
+    current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
     全てのメニュー一覧を取得（管理用）
+    
+    **必要な権限:** owner, manager, staff
     """
     query = db.query(Menu)
     
@@ -209,10 +217,12 @@ def get_all_menus(
 def create_menu(
     menu: MenuCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_store_user)
+    current_user: User = Depends(require_role(['owner', 'manager']))
 ):
     """
     新しいメニューを作成
+    
+    **必要な権限:** owner, manager
     """
     db_menu = Menu(**menu.dict())
     
@@ -228,10 +238,12 @@ def update_menu(
     menu_id: int,
     menu_update: MenuUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_store_user)
+    current_user: User = Depends(require_role(['owner', 'manager']))
 ):
     """
     既存メニューを更新
+    
+    **必要な権限:** owner, manager
     """
     menu = db.query(Menu).filter(Menu.id == menu_id).first()
     
@@ -256,12 +268,14 @@ def update_menu(
 def delete_menu(
     menu_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_store_user)
+    current_user: User = Depends(require_role(['owner']))
 ):
     """
     メニューを削除
     
     注意: 既存の注文がある場合は論理削除（is_available = False）を推奨
+    
+    **必要な権限:** owner
     """
     menu = db.query(Menu).filter(Menu.id == menu_id).first()
     
@@ -293,7 +307,7 @@ def get_sales_report(
     start_date: Optional[str] = Query(None, description="開始日 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="終了日 (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_store_user)
+    current_user: User = Depends(require_role(['owner', 'manager']))
 ):
     """
     売上レポートを取得
@@ -301,6 +315,8 @@ def get_sales_report(
     - 日別、週別、月別の売上集計
     - メニュー別売上ランキング
     - 指定期間での集計
+    
+    **必要な権限:** owner, manager
     """
     # デフォルトの期間設定
     if not start_date:

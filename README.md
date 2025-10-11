@@ -248,6 +248,56 @@ GET  /api/store/orders             # 全注文一覧
 PUT  /api/store/orders/{id}/status # 注文ステータス更新
 POST /api/store/menus              # メニュー作成
 PUT  /api/store/menus/{id}         # メニュー更新
+DELETE /api/store/menus/{id}       # メニュー削除
+GET  /api/store/reports/sales      # 売上レポート
+```
+
+**店舗エンドポイントの権限マトリックス:**
+
+| エンドポイント | owner | manager | staff | 説明 |
+|---------------|:-----:|:-------:|:-----:|------|
+| **ダッシュボード** |
+| GET /dashboard | ✅ | ✅ | ✅ | 本日の注文状況サマリー |
+| **注文管理** |
+| GET /orders | ✅ | ✅ | ✅ | 全注文一覧取得 |
+| PUT /orders/{id}/status | ✅ | ✅ | ✅ | 注文ステータス更新 |
+| **メニュー管理** |
+| GET /menus | ✅ | ✅ | ✅ | メニュー一覧取得 |
+| POST /menus | ✅ | ✅ | ❌ | メニュー作成 |
+| PUT /menus/{id} | ✅ | ✅ | ❌ | メニュー更新 |
+| DELETE /menus/{id} | ✅ | ❌ | ❌ | メニュー削除 (オーナーのみ) |
+| **レポート** |
+| GET /reports/sales | ✅ | ✅ | ❌ | 売上レポート取得 |
+
+> **注意**: 店舗スタッフユーザーには `owner`, `manager`, `staff` のいずれかのロールが割り当てられます。各エンドポイントは割り当てられたロールに基づいてアクセス制御されます。
+DELETE /api/store/menus/{id}       # メニュー削除
+GET  /api/store/reports/sales      # 売上レポート
+```
+
+### 店舗向けAPI権限マトリックス
+
+店舗スタッフには `owner`（オーナー）、`manager`（マネージャー）、`staff`（スタッフ）の3つの役割があり、各エンドポイントで必要な権限が異なります。
+
+| エンドポイント | owner | manager | staff | 説明 |
+|---------------|:-----:|:-------:|:-----:|------|
+| **ダッシュボード** |
+| GET /dashboard | ✅ | ✅ | ✅ | 本日の注文状況を確認 |
+| **注文管理** |
+| GET /orders | ✅ | ✅ | ✅ | 全注文一覧を閲覧 |
+| PUT /orders/{id}/status | ✅ | ✅ | ✅ | 注文ステータスを更新 |
+| **メニュー管理** |
+| GET /menus | ✅ | ✅ | ✅ | メニュー一覧を閲覧 |
+| POST /menus | ✅ | ✅ | ❌ | メニューを作成 |
+| PUT /menus/{id} | ✅ | ✅ | ❌ | メニューを更新 |
+| DELETE /menus/{id} | ✅ | ❌ | ❌ | メニューを削除（オーナーのみ） |
+| **レポート** |
+| GET /reports/sales | ✅ | ✅ | ❌ | 売上レポートを閲覧 |
+
+**権限による制限:**
+- **スタッフ**: 注文確認・ステータス更新、メニュー閲覧のみ可能
+- **マネージャー**: スタッフ権限 + メニュー作成・更新、売上レポート閲覧
+- **オーナー**: 全権限（メニュー削除を含む）
+
 GET  /api/store/reports/sales      # 売上レポート
 ```
 
