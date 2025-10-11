@@ -13,7 +13,8 @@ API契約定義 - Single Source of Truth
 
 from datetime import datetime, time
 from typing import Optional, List, Literal
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
 
 
 # ===== 共通型定義 =====
@@ -56,7 +57,11 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     is_active: bool
+    store_id: Optional[int] = None
     created_at: datetime
+    
+    # 店舗情報も含める（オプショナル）
+    store: Optional['StoreResponse'] = None
 
     class Config:
         from_attributes = True
@@ -136,6 +141,96 @@ class UserWithRolesResponse(BaseModel):
         from_attributes = True
 
 
+# ===== 店舗（Store）関連 =====
+
+class StoreBase(BaseModel):
+    """店舗の基本情報"""
+    name: str = Field(..., min_length=1, max_length=100, description="店舗名")
+    address: str = Field(..., min_length=1, max_length=255, description="住所")
+    phone_number: str = Field(..., min_length=10, max_length=20, description="電話番号（ハイフンあり/なし両対応）")
+    email: EmailStr = Field(..., description="店舗のメールアドレス")
+    opening_time: time = Field(..., description="開店時刻")
+    closing_time: time = Field(..., description="閉店時刻")
+    description: Optional[str] = Field(None, max_length=1000, description="店舗説明")
+    image_url: Optional[str] = Field(None, max_length=500, description="店舗画像URL")
+    is_active: bool = Field(True, description="店舗の有効/無効状態")
+
+    @field_validator('phone_number')
+    @classmethod
+    def validate_phone_number(cls, v: str) -> str:
+        """電話番号の形式を検証（日本の電話番号形式）"""
+        # ハイフンを除去して数字のみにする
+        digits_only = re.sub(r'[^0-9]', '', v)
+        
+        # 10桁または11桁の数字であることを確認
+        if not re.match(r'^0\d{9,10}$', digits_only):
+            raise ValueError('電話番号は0から始まる10桁または11桁の数字である必要があります（例: 03-1234-5678, 090-1234-5678）')
+        
+        return v
+
+    @field_validator('closing_time')
+    @classmethod
+    def validate_closing_time(cls, v: time, info) -> time:
+        """閉店時刻が開店時刻より後であることを検証"""
+        # info.data から opening_time を取得
+        if 'opening_time' in info.data:
+            opening_time = info.data['opening_time']
+            if v == opening_time:
+                raise ValueError('閉店時刻は開店時刻と同じにはできません')
+            # 開店時刻 < 閉店時刻（同日営業）または 開店時刻 > 閉店時刻（翌日営業）を許容
+        return v
+
+
+class StoreCreate(StoreBase):
+    """店舗作成時のリクエスト"""
+    pass
+
+
+class StoreUpdate(BaseModel):
+    """店舗更新時のリクエスト（すべてオプショナル）"""
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="店舗名")
+    address: Optional[str] = Field(None, min_length=1, max_length=255, description="住所")
+    phone_number: Optional[str] = Field(None, min_length=10, max_length=20, description="電話番号")
+    email: Optional[EmailStr] = Field(None, description="店舗のメールアドレス")
+    opening_time: Optional[time] = Field(None, description="開店時刻")
+    closing_time: Optional[time] = Field(None, description="閉店時刻")
+    description: Optional[str] = Field(None, max_length=1000, description="店舗説明")
+    image_url: Optional[str] = Field(None, max_length=500, description="店舗画像URL")
+    is_active: Optional[bool] = Field(None, description="店舗の有効/無効状態")
+
+    @field_validator('phone_number')
+    @classmethod
+    def validate_phone_number(cls, v: Optional[str]) -> Optional[str]:
+        """電話番号の形式を検証（日本の電話番号形式）"""
+        if v is None:
+            return v
+        
+        # ハイフンを除去して数字のみにする
+        digits_only = re.sub(r'[^0-9]', '', v)
+        
+        # 10桁または11桁の数字であることを確認
+        if not re.match(r'^0\d{9,10}$', digits_only):
+            raise ValueError('電話番号は0から始まる10桁または11桁の数字である必要があります（例: 03-1234-5678, 090-1234-5678）')
+        
+        return v
+
+
+class StoreResponse(StoreBase):
+    """店舗情報のレスポンス"""
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class StoreListResponse(BaseModel):
+    """店舗一覧のレスポンス"""
+    stores: List[StoreResponse]
+    total: int
+
+
 # ===== メニュー関連 =====
 
 class MenuBase(BaseModel):
@@ -149,7 +244,7 @@ class MenuBase(BaseModel):
 
 class MenuCreate(MenuBase):
     """メニュー作成時のリクエスト"""
-    pass
+    store_id: int = Field(..., ge=1, description="所属店舗ID")
 
 
 class MenuUpdate(BaseModel):
@@ -164,8 +259,12 @@ class MenuUpdate(BaseModel):
 class MenuResponse(MenuBase):
     """メニュー情報のレスポンス"""
     id: int
+    store_id: int
     created_at: datetime
     updated_at: datetime
+    
+    # 店舗情報も含める（オプショナル）
+    store: Optional['StoreResponse'] = None
 
     class Config:
         from_attributes = True
@@ -189,7 +288,7 @@ class OrderBase(BaseModel):
 
 class OrderCreate(OrderBase):
     """注文作成時のリクエスト"""
-    pass
+    store_id: int = Field(..., ge=1, description="注文先店舗ID")
 
 
 class OrderStatusUpdate(BaseModel):
@@ -202,6 +301,7 @@ class OrderResponse(BaseModel):
     id: int
     user_id: int
     menu_id: int
+    store_id: int
     quantity: int
     total_price: int
     status: str
@@ -212,6 +312,9 @@ class OrderResponse(BaseModel):
     
     # メニュー情報も含める
     menu: MenuResponse
+    
+    # 店舗情報も含める（オプショナル）
+    store: Optional['StoreResponse'] = None
     
     # お客様情報（店舗向けのみ）
     user: Optional[UserResponse] = None
@@ -374,3 +477,10 @@ class StoreResponse(StoreBase):
 
     class Config:
         from_attributes = True
+
+
+# ===== 前方参照の解決 =====
+# StoreResponse の前方参照を解決
+UserResponse.model_rebuild()
+MenuResponse.model_rebuild()
+OrderResponse.model_rebuild()
