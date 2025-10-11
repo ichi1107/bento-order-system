@@ -11,18 +11,18 @@ from database import Base
 
 
 class Store(Base):
-    """店舗テーブル"""
+    """店舗テーブル（マルチテナント対応の中核）"""
     __tablename__ = "stores"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False, index=True)
-    address = Column(String(512))
-    phone_number = Column(String(50))
-    email = Column(String(255))
-    opening_time = Column(Time)
-    closing_time = Column(Time)
+    name = Column(String(100), nullable=False, index=True)
+    address = Column(String(255), nullable=False)
+    phone_number = Column(String(20), nullable=False)
+    email = Column(String(255), nullable=False)
+    opening_time = Column(Time, nullable=False)
+    closing_time = Column(Time, nullable=False)
     description = Column(Text)
-    image_url = Column(String(512))
+    image_url = Column(String(500))
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
