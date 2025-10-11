@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from main import app
 from database import Base, get_db
-from models import User, Menu, Order
+from models import User, Menu, Order, Role, UserRole
 from auth import get_password_hash
 from datetime import datetime, timedelta
 
@@ -118,9 +118,10 @@ def customer_user_empty(db_session):
 
 
 @pytest.fixture
-def store_user(db_session):
+def store_user(db_session, roles):
     """
-    テスト用店舗ユーザー
+    テスト用店舗ユーザー (owner権限付き)
+    既存テストとの互換性のため、ownerロールを自動割当
     """
     user = User(
         username="store_user",
@@ -133,115 +134,112 @@ def store_user(db_session):
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
-    return user
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from main import app
-from database import Base, get_db
-from models import User, Menu, Order
-from auth import get_password_hash
-from datetime import datetime, timedelta
-
-
-# テスト用インメモリデータベース
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-@pytest.fixture(scope="function")
-def db_session():
-    """
-    テスト用データベースセッションを提供
-    各テストごとに新しいデータベースを作成
-    """
-    Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture(scope="function")
-def client(db_session):
-    """
-    テスト用FastAPIクライアントを提供
-    """
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
     
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def customer_user_a(db_session):
-    """
-    テスト用顧客ユーザーA
-    """
-    user = User(
-        username="customer_a",
-        email="customer_a@test.com",
-        full_name="テスト顧客A",
-        hashed_password=get_password_hash("password123"),
-        role="customer",
-        is_active=True
-    )
-    db_session.add(user)
+    # 既存テストとの互換性のため、ownerロールを割り当て
+    user_role = UserRole(user_id=user.id, role_id=roles["owner"].id)
+    db_session.add(user_role)
     db_session.commit()
-    db_session.refresh(user)
+    
     return user
 
 
 @pytest.fixture
-def customer_user_b(db_session):
+def roles(db_session):
     """
-    テスト用顧客ユーザーB
+    テスト用役割データを作成
+    """
+    owner_role = Role(name="owner", description="店舗オーナー")
+    manager_role = Role(name="manager", description="店舗マネージャー")
+    staff_role = Role(name="staff", description="店舗スタッフ")
+    
+    db_session.add(owner_role)
+    db_session.add(manager_role)
+    db_session.add(staff_role)
+    db_session.commit()
+    
+    db_session.refresh(owner_role)
+    db_session.refresh(manager_role)
+    db_session.refresh(staff_role)
+    
+    return {
+        "owner": owner_role,
+        "manager": manager_role,
+        "staff": staff_role
+    }
+
+
+@pytest.fixture
+def owner_user(db_session, roles):
+    """
+    テスト用オーナーユーザー
     """
     user = User(
-        username="customer_b",
-        email="customer_b@test.com",
-        full_name="テスト顧客B",
+        username="owner_user",
+        email="owner@test.com",
+        full_name="テストオーナー",
         hashed_password=get_password_hash("password123"),
-        role="customer",
+        role="store",
         is_active=True
     )
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+    
+    # ロールを割り当て
+    user_role = UserRole(user_id=user.id, role_id=roles["owner"].id)
+    db_session.add(user_role)
+    db_session.commit()
+    
     return user
 
 
 @pytest.fixture
-def customer_user_empty(db_session):
+def manager_user(db_session, roles):
     """
-    注文履歴がないテスト用顧客ユーザー
+    テスト用マネージャーユーザー
     """
     user = User(
-        username="customer_empty",
-        email="customer_empty@test.com",
-        full_name="テスト顧客（履歴なし）",
+        username="manager_user",
+        email="manager@test.com",
+        full_name="テストマネージャー",
         hashed_password=get_password_hash("password123"),
-        role="customer",
+        role="store",
         is_active=True
     )
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+    
+    # ロールを割り当て
+    user_role = UserRole(user_id=user.id, role_id=roles["manager"].id)
+    db_session.add(user_role)
+    db_session.commit()
+    
+    return user
+
+
+@pytest.fixture
+def staff_user(db_session, roles):
+    """
+    テスト用スタッフユーザー
+    """
+    user = User(
+        username="staff_user",
+        email="staff@test.com",
+        full_name="テストスタッフ",
+        hashed_password=get_password_hash("password123"),
+        role="store",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    # ロールを割り当て
+    user_role = UserRole(user_id=user.id, role_id=roles["staff"].id)
+    db_session.add(user_role)
+    db_session.commit()
+    
     return user
 
 
@@ -425,4 +423,31 @@ def auth_headers_store(client, store_user):
     店舗ユーザーの認証ヘッダー
     """
     token = get_auth_token(client, "store_user", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_owner(client, owner_user):
+    """
+    オーナーユーザーの認証ヘッダー
+    """
+    token = get_auth_token(client, "owner_user", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_manager(client, manager_user):
+    """
+    マネージャーユーザーの認証ヘッダー
+    """
+    token = get_auth_token(client, "manager_user", "password123")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_staff(client, staff_user):
+    """
+    スタッフユーザーの認証ヘッダー
+    """
+    token = get_auth_token(client, "staff_user", "password123")
     return {"Authorization": f"Bearer {token}"}
