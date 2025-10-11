@@ -62,6 +62,50 @@ class ApiClient {
             method: 'DELETE'
         });
     }
+
+    static async uploadImage(endpoint, formData) {
+        const url = `${API_BASE_URL}${endpoint}`;
+        const config = {
+            method: 'POST',
+            headers: {}
+        };
+
+        // 認証トークンがある場合は追加
+        if (authToken) {
+            config.headers['Authorization'] = `Bearer ${authToken}`;
+        }
+
+        // FormDataの場合はContent-Typeを設定しない（自動設定される）
+        config.body = formData;
+
+        try {
+            const response = await fetch(url, config);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Image upload failed:', error);
+            throw error;
+        }
+    }
+
+    static async getCurrentUser() {
+        if (!authToken) {
+            throw new Error('Not authenticated');
+        }
+        // ローカルストレージから取得するか、APIから取得
+        if (currentUser) {
+            return currentUser;
+        }
+        const user = await this.get('/auth/me');
+        currentUser = user;
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        return user;
+    }
 }
 
 // 認証関連のヘルパー関数
@@ -542,3 +586,6 @@ class Cart {
 
 // グローバルカートインスタンス
 const cart = new Cart();
+
+// グローバルAPIクライアントインスタンス
+const apiClient = ApiClient;

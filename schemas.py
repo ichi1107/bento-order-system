@@ -49,6 +49,24 @@ class UserLogin(BaseModel):
     password: str
 
 
+class RoleResponse(BaseModel):
+    """ロール情報のレスポンス"""
+    id: int
+    name: str
+    
+    class Config:
+        from_attributes = True
+
+
+class UserRoleResponse(BaseModel):
+    """ユーザーロール情報のレスポンス"""
+    id: int
+    role: RoleResponse
+    
+    class Config:
+        from_attributes = True
+
+
 class UserResponse(BaseModel):
     """ユーザー情報のレスポンス"""
     id: int
@@ -59,6 +77,7 @@ class UserResponse(BaseModel):
     is_active: bool
     store_id: Optional[int] = None
     created_at: datetime
+    user_roles: List[UserRoleResponse] = []
     
     # 店舗情報も含める（オプショナル）
     store: Optional['StoreResponse'] = None
@@ -453,7 +472,8 @@ class StoreBase(BaseModel):
 
 class StoreCreate(StoreBase):
     """店舗作成リクエスト"""
-    pass
+    opening_time: time = Field(..., description="開店時間")
+    closing_time: time = Field(..., description="閉店時間")
 
 
 class StoreUpdate(BaseModel):
