@@ -19,6 +19,7 @@ from models import User, Menu, Order, Store
 from schemas import (
     MenuCreate, MenuUpdate, MenuResponse, MenuListResponse,
     OrderResponse, OrderListResponse, OrderStatusUpdate, OrderSummary,
+    YesterdayComparison, PopularMenu, HourlyOrderData,
     SalesReportResponse, DailySalesReport, MenuSalesReport,
     StoreResponse, StoreUpdate
 )
@@ -250,6 +251,16 @@ def get_dashboard(
     本日の注文状況サマリーを取得
     
     **必要な権限:** owner, manager, staff
+    
+    **レスポンス:**
+    - total_orders: 本日の総注文数
+    - 各ステータスの注文数（pending, confirmed, preparing, ready, completed, cancelled）
+    - total_sales: 本日の総売上（キャンセル除く）
+    - today_revenue: 本日の総売上（total_salesと同値）
+    - average_order_value: 平均注文単価
+    - yesterday_comparison: 前日との比較データ（注文数・売上の増減）
+    - popular_menus: 本日の人気メニュートップ3
+    - hourly_orders: 時間帯別の注文数（0-23時）
     """
     # ユーザーが店舗に所属しているか確認
     if not current_user.store_id:
@@ -259,13 +270,17 @@ def get_dashboard(
         )
     
     today = date.today()
+    yesterday = today - timedelta(days=1)
+    
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
+    yesterday_start = datetime.combine(yesterday, datetime.min.time())
+    yesterday_end = datetime.combine(yesterday, datetime.max.time())
     
-    # 本日の注文を取得（自店舗のみ）
+    # === 本日の注文を取得（自店舗のみ） ===
     today_orders = db.query(Order).filter(
         and_(
-            Order.store_id == current_user.store_id,  # 店舗フィルタ追加
+            Order.store_id == current_user.store_id,
             Order.ordered_at >= today_start,
             Order.ordered_at <= today_end
         )
@@ -283,12 +298,99 @@ def get_dashboard(
     # 売上計算（キャンセル除く、自店舗のみ）
     total_sales = db.query(func.sum(Order.total_price)).filter(
         and_(
-            Order.store_id == current_user.store_id,  # 店舗フィルタ追加
+            Order.store_id == current_user.store_id,
             Order.ordered_at >= today_start,
             Order.ordered_at <= today_end,
             Order.status != "cancelled"
         )
     ).scalar() or 0
+    
+    # 平均注文単価の計算（キャンセル除く）
+    completed_order_count = total_orders - cancelled_orders
+    average_order_value = float(total_sales) / completed_order_count if completed_order_count > 0 else 0.0
+    
+    # === 前日データの取得 ===
+    yesterday_orders_count = db.query(func.count(Order.id)).filter(
+        and_(
+            Order.store_id == current_user.store_id,
+            Order.ordered_at >= yesterday_start,
+            Order.ordered_at <= yesterday_end
+        )
+    ).scalar() or 0
+    
+    yesterday_revenue = db.query(func.sum(Order.total_price)).filter(
+        and_(
+            Order.store_id == current_user.store_id,
+            Order.ordered_at >= yesterday_start,
+            Order.ordered_at <= yesterday_end,
+            Order.status != "cancelled"
+        )
+    ).scalar() or 0
+    
+    # 前日比較の計算
+    orders_change = total_orders - yesterday_orders_count
+    orders_change_percent = (orders_change / yesterday_orders_count * 100) if yesterday_orders_count > 0 else 0.0
+    revenue_change = total_sales - yesterday_revenue
+    revenue_change_percent = (revenue_change / yesterday_revenue * 100) if yesterday_revenue > 0 else 0.0
+    
+    yesterday_comparison = YesterdayComparison(
+        orders_change=orders_change,
+        orders_change_percent=round(orders_change_percent, 2),
+        revenue_change=revenue_change,
+        revenue_change_percent=round(revenue_change_percent, 2)
+    )
+    
+    # === 人気メニュートップ3の取得（本日） ===
+    popular_menus_data = db.query(
+        Order.menu_id,
+        Menu.name,
+        func.count(Order.id).label('order_count'),
+        func.sum(Order.total_price).label('total_revenue')
+    ).join(
+        Menu, Order.menu_id == Menu.id
+    ).filter(
+        and_(
+            Order.store_id == current_user.store_id,
+            Order.ordered_at >= today_start,
+            Order.ordered_at <= today_end,
+            Order.status != "cancelled"
+        )
+    ).group_by(
+        Order.menu_id, Menu.name
+    ).order_by(
+        desc('order_count')
+    ).limit(3).all()
+    
+    popular_menus = [
+        PopularMenu(
+            menu_id=menu_id,
+            menu_name=menu_name,
+            order_count=order_count,
+            total_revenue=total_revenue or 0
+        )
+        for menu_id, menu_name, order_count, total_revenue in popular_menus_data
+    ]
+    
+    # === 時間帯別注文数の取得（本日） ===
+    hourly_data = db.query(
+        func.extract('hour', Order.ordered_at).label('hour'),
+        func.count(Order.id).label('order_count')
+    ).filter(
+        and_(
+            Order.store_id == current_user.store_id,
+            Order.ordered_at >= today_start,
+            Order.ordered_at <= today_end
+        )
+    ).group_by(
+        'hour'
+    ).all()
+    
+    # 0-23時まで全ての時間帯を含める（データがない時間は0件）
+    hourly_orders_dict = {int(hour): count for hour, count in hourly_data}
+    hourly_orders = [
+        HourlyOrderData(hour=hour, order_count=hourly_orders_dict.get(hour, 0))
+        for hour in range(24)
+    ]
     
     return {
         "total_orders": total_orders,
@@ -298,7 +400,12 @@ def get_dashboard(
         "ready_orders": ready_orders,
         "completed_orders": completed_orders,
         "cancelled_orders": cancelled_orders,
-        "total_sales": total_sales
+        "total_sales": total_sales,
+        "today_revenue": total_sales,
+        "average_order_value": round(average_order_value, 2),
+        "yesterday_comparison": yesterday_comparison,
+        "popular_menus": popular_menus,
+        "hourly_orders": hourly_orders
     }
 
 

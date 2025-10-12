@@ -375,8 +375,31 @@ class OrderHistoryResponse(BaseModel):
     total: int
 
 
+class YesterdayComparison(BaseModel):
+    """前日比較データ"""
+    orders_change: int  # 注文数の増減
+    orders_change_percent: float  # 注文数の増減率（%）
+    revenue_change: int  # 売上の増減
+    revenue_change_percent: float  # 売上の増減率（%）
+
+
+class PopularMenu(BaseModel):
+    """人気メニュー情報"""
+    menu_id: int
+    menu_name: str
+    order_count: int
+    total_revenue: int
+
+
+class HourlyOrderData(BaseModel):
+    """時間帯別注文データ"""
+    hour: int  # 0-23
+    order_count: int
+
+
 class OrderSummary(BaseModel):
     """注文サマリー（ダッシュボード用）"""
+    # 基本統計
     total_orders: int
     pending_orders: int
     confirmed_orders: int
@@ -385,6 +408,13 @@ class OrderSummary(BaseModel):
     completed_orders: int
     cancelled_orders: int
     total_sales: int
+    
+    # 拡張統計
+    today_revenue: int  # 本日の総売上（キャンセル除く）
+    average_order_value: float  # 平均注文単価
+    yesterday_comparison: YesterdayComparison  # 前日比較
+    popular_menus: List[PopularMenu]  # 人気メニュートップ3
+    hourly_orders: List[HourlyOrderData]  # 時間帯別注文数
 
 
 # ===== レポート関連 =====
