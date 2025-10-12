@@ -459,11 +459,13 @@ def get_weekly_sales(
 
 @router.get("/orders", response_model=OrderListResponse, summary="全注文一覧取得")
 def get_all_orders(
-    status_filter: Optional[str] = Query(None, description="ステータスでフィルタ"),
+    status: Optional[str] = Query(None, description="ステータスでフィルタ（カンマ区切りで複数指定可）"),
     start_date: Optional[str] = Query(None, description="開始日 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="終了日 (YYYY-MM-DD)"),
+    q: Optional[str] = Query(None, description="検索キーワード（顧客名、メニュー名）"),
+    sort: Optional[str] = Query("newest", description="ソート順: newest, oldest, price_high, price_low"),
     page: int = Query(1, ge=1, description="ページ番号"),
-    per_page: int = Query(20, ge=1, le=100, description="1ページあたりの件数"),
+    per_page: int = Query(100, ge=1, le=1000, description="1ページあたりの件数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
@@ -471,7 +473,8 @@ def get_all_orders(
     全ての注文一覧を取得（自店舗のみ）
     
     - 最新の注文から順に表示
-    - ステータスや日付でフィルタリング可能
+    - ステータス、日付、キーワードでフィルタリング可能
+    - 注文日時、金額でソート可能
     - ユーザー情報とメニュー情報を含む
     
     **必要な権限:** owner, manager, staff
@@ -486,9 +489,14 @@ def get_all_orders(
     # 自店舗の注文のみを取得
     query = db.query(Order).filter(Order.store_id == current_user.store_id)
     
-    # ステータスフィルタ
-    if status_filter:
-        query = query.filter(Order.status == status_filter)
+    # キーワード検索がある場合はJOINを追加
+    needs_user_join = False
+    needs_menu_join = False
+    
+    # ステータスフィルタ（複数選択対応）
+    if status:
+        status_list = [s.strip() for s in status.split(',')]
+        query = query.filter(Order.status.in_(status_list))
     
     # 日付フィルタ
     if start_date:
@@ -504,6 +512,7 @@ def get_all_orders(
     if end_date:
         try:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            # 終了日の23:59:59まで含める
             end_dt = end_dt.replace(hour=23, minute=59, second=59)
             query = query.filter(Order.ordered_at <= end_dt)
         except ValueError:
@@ -512,8 +521,32 @@ def get_all_orders(
                 detail="Invalid end_date format. Use YYYY-MM-DD"
             )
     
-    # 最新順でソート
-    query = query.order_by(desc(Order.ordered_at))
+    # キーワード検索（顧客名、メニュー名）
+    if q:
+        search_term = f"%{q}%"
+        # JOINを1回だけ行う
+        if not needs_user_join:
+            query = query.join(User, Order.user_id == User.id)
+            needs_user_join = True
+        if not needs_menu_join:
+            query = query.join(Menu, Order.menu_id == Menu.id)
+            needs_menu_join = True
+        
+        query = query.filter(
+            (User.full_name.ilike(search_term)) |
+            (User.username.ilike(search_term)) |
+            (Menu.name.ilike(search_term))
+        )
+    
+    # ソート
+    if sort == "oldest":
+        query = query.order_by(Order.ordered_at.asc())
+    elif sort == "price_high":
+        query = query.order_by(Order.total_price.desc())
+    elif sort == "price_low":
+        query = query.order_by(Order.total_price.asc())
+    else:  # newest (デフォルト)
+        query = query.order_by(Order.ordered_at.desc())
     
     # 総件数を取得
     total = query.count()
@@ -522,10 +555,13 @@ def get_all_orders(
     offset = (page - 1) * per_page
     orders = query.offset(offset).limit(per_page).all()
     
-    # ユーザー情報とメニュー情報を含める
-    for order in orders:
-        order.user = db.query(User).filter(User.id == order.user_id).first()
-        order.menu = db.query(Menu).filter(Menu.id == order.menu_id).first()
+    # ユーザー情報とメニュー情報を含める（JOINしていない場合）
+    if not needs_user_join or not needs_menu_join:
+        for order in orders:
+            if not needs_user_join:
+                order.user = db.query(User).filter(User.id == order.user_id).first()
+            if not needs_menu_join:
+                order.menu = db.query(Menu).filter(Menu.id == order.menu_id).first()
     
     return {"orders": orders, "total": total}
 
