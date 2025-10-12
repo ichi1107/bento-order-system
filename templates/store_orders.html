@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注文管理 - 弁当注文管理システム</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/store_orders.css">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+</head>
+<body>
+    <div class="container">
+        {% set active_page = 'orders' %}
+        {% include 'includes/store_header.html' %}
+
+    <!-- メインコンテンツ -->
+    <main class="main-content">
+        <div class="content-wrapper">
+            <!-- ページヘッダー -->
+            <section class="page-header">
+                <div class="header-content">
+                    <div>
+                        <h2>📦 注文管理</h2>
+                        <div class="header-badges">
+                            <span class="badge badge-info">全: <span id="totalOrdersCount">0</span>件</span>
+                            <span class="badge badge-warning">未確認: <span id="pendingOrdersCount">0</span>件</span>
+                            <span class="badge badge-purple">準備中: <span id="preparingCount">0</span>件</span>
+                            <span class="badge badge-success">受取可: <span id="readyCount">0</span>件</span>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" id="refreshBtn" title="最新の状態に更新">
+                            🔄 更新
+                        </button>
+                        <div class="auto-refresh-status" id="autoRefreshStatus">
+                            <span class="status-text" id="autoRefreshText">自動更新: 停止中</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- フィルターセクション -->
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label for="statusFilter">ステータス:</label>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="all">すべて</option>
+                        <option value="pending">未確認</option>
+                        <option value="confirmed">確認済み</option>
+                        <option value="preparing">準備中</option>
+                        <option value="ready">受取可能</option>
+                        <option value="completed">完了</option>
+                        <option value="cancelled">キャンセル</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="sortOrder">並び順:</label>
+                    <select id="sortOrder" class="filter-select">
+                        <option value="newest">新しい順</option>
+                        <option value="oldest">古い順</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ローディング表示 -->
+            <div class="loading-container" id="loadingContainer">
+                <div class="spinner"></div>
+                <p>注文データを読み込んでいます...</p>
+            </div>
+
+            <!-- エラー表示 -->
+            <div class="error-container" id="errorContainer" style="display: none;">
+                <div class="error-message">
+                    <span class="error-icon">⚠️</span>
+                    <div class="error-content">
+                        <h3>データの取得に失敗しました</h3>
+                        <p id="errorMessage"></p>
+                        <button class="btn btn-primary" onclick="window.orderManager.loadOrders()">再試行</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 注文カード一覧 -->
+            <div class="orders-grid" id="ordersGrid">
+                <!-- 注文カードはJavaScriptで動的に生成 -->
+            </div>
+
+            <!-- 注文なし表示 -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">📭</div>
+                <h3>注文がありません</h3>
+                <p>現在表示できる注文はありません</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- 注文詳細モーダル -->
+    <div class="modal" id="orderDetailModal">
+        <div class="modal-overlay" id="modalOverlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>注文詳細</h3>
+                <button class="modal-close" id="modalCloseBtn" aria-label="閉じる">&times;</button>
+            </div>
+            <div class="modal-body" id="orderDetailBody">
+                <!-- 注文詳細はJavaScriptで動的に生成 -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalCancelBtn">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- トースト通知 -->
+    <div class="toast-container" id="toastContainer">
+        <!-- トーストメッセージはJavaScriptで動的に生成 -->
+    </div>
+        </div>
+    </main>
+
+    {% include 'includes/store_footer.html' %}
+    </div>
+
+    <script src="/static/js/common.js" defer></script>
+    <script src="/static/js/store_orders.js" defer></script>
+</body>
+</html>
