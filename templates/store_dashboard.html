@@ -18,31 +18,8 @@
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <div class="header-container">
-                <div class="header-left">
-                    <h1 class="header-title">🏪 店舗管理システム</h1>
-                    <span class="store-name" id="storeName">読込中...</span>
-                </div>
-                <nav class="nav">
-                    <a href="/store/dashboard" class="nav-link active">📊 ダッシュボード</a>
-                    <a href="/store/orders" class="nav-link">📋 注文管理</a>
-                    <a href="/store/menus" class="nav-link">🍱 メニュー管理</a>
-                    <a href="/store/reports" class="nav-link">📈 レポート</a>
-                    <a href="/store/profile" class="nav-link">⚙️ 店舗情報</a>
-                </nav>
-                <div class="header-right">
-                    <div class="user-info">
-                        <span class="user-icon">👤</span>
-                        <div class="user-details">
-                            <span class="user-name" id="userName">読込中...</span>
-                            <span class="user-role" id="userRole">-</span>
-                        </div>
-                    </div>
-                    <a href="/logout" class="logout-btn">ログアウト</a>
-                </div>
-            </div>
-        </header>
+        {% set active_page = 'dashboard' %}
+        {% include 'includes/store_header.html' %}
 
         <main class="main">
             <section class="page-header">
@@ -137,9 +114,7 @@
             </section>
         </main>
 
-        <footer class="footer">
-            <p>&copy; 2025 弁当注文システム - 店舗管理</p>
-        </footer>
+        {% include 'includes/store_footer.html' %}
     </div>
 
     <!-- パフォーマンス最適化: JavaScript遅延読み込み -->
