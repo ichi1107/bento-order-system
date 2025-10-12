@@ -409,6 +409,57 @@ def get_dashboard(
     }
 
 
+@router.get("/dashboard/weekly-sales", summary="週間売上データ取得")
+def get_weekly_sales(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
+):
+    """
+    過去7日間の日別売上データを取得
+    
+    **必要な権限:** owner, manager, staff
+    
+    **レスポンス:**
+    - labels: 日付のリスト（YYYY-MM-DD形式）
+    - data: 各日の売上金額のリスト
+    """
+    # ユーザーが店舗に所属しているか確認
+    if not current_user.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any store"
+        )
+    
+    # 過去7日間のデータを取得
+    today = date.today()
+    weekly_data = []
+    
+    for days_ago in range(6, -1, -1):  # 6日前から今日まで
+        target_date = today - timedelta(days=days_ago)
+        date_start = datetime.combine(target_date, datetime.min.time())
+        date_end = datetime.combine(target_date, datetime.max.time())
+        
+        # その日の売上を集計（キャンセル除く）
+        daily_revenue = db.query(func.sum(Order.total_price)).filter(
+            and_(
+                Order.store_id == current_user.store_id,
+                Order.ordered_at >= date_start,
+                Order.ordered_at <= date_end,
+                Order.status != "cancelled"
+            )
+        ).scalar() or 0
+        
+        weekly_data.append({
+            "date": target_date.strftime("%Y-%m-%d"),
+            "revenue": daily_revenue
+        })
+    
+    return {
+        "labels": [item["date"] for item in weekly_data],
+        "data": [item["revenue"] for item in weekly_data]
+    }
+
+
 # ===== 注文管理 =====
 
 @router.get("/orders", response_model=OrderListResponse, summary="全注文一覧取得")

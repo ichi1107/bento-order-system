@@ -7,6 +7,7 @@ class DashboardManager {
     constructor() {
         this.data = null;
         this.isLoading = false;
+        this.chart = null; // Chart.jsインスタンスを保存
     }
 
     /**
@@ -87,6 +88,7 @@ class DashboardManager {
 
         this.renderStatCards();
         this.renderPopularMenus();
+        this.renderWeeklySalesChart(); // チャート描画を追加
     }
 
     /**
@@ -220,6 +222,124 @@ class DashboardManager {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * 週間売上チャートを描画
+     */
+    async renderWeeklySalesChart() {
+        try {
+            // 週間売上データを取得
+            const weeklySalesData = await ApiClient.get('/store/dashboard/weekly-sales');
+            
+            // Canvas要素を取得
+            const canvas = document.getElementById('weeklySalesChart');
+            if (!canvas) {
+                console.error('Canvas element not found');
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+
+            // 既存のチャートがあれば破棄
+            if (this.chart) {
+                this.chart.destroy();
+            }
+
+            // Chart.jsでグラフを作成
+            this.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: weeklySalesData.labels,
+                    datasets: [{
+                        label: '売上 (円)',
+                        data: weeklySalesData.data,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    family: "'Noto Sans JP', sans-serif"
+                                },
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: {
+                                size: 14,
+                                family: "'Noto Sans JP', sans-serif"
+                            },
+                            bodyFont: {
+                                size: 13,
+                                family: "'Noto Sans JP', sans-serif"
+                            },
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += UI.formatPrice(context.parsed.y);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    family: "'Noto Sans JP', sans-serif"
+                                },
+                                callback: function(value) {
+                                    return '¥' + value.toLocaleString();
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    family: "'Noto Sans JP', sans-serif"
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            console.log('Weekly sales chart rendered successfully');
+        } catch (error) {
+            console.error('Failed to render weekly sales chart:', error);
+            // チャート描画エラーは致命的ではないので、アラートは表示しない
+        }
     }
 
     /**
