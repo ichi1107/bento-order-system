@@ -1,17 +1,25 @@
 ﻿/**
- * 店舗注文管理 JavaScript
+ * 店舗注文管理 JavaScript - 拡張フィルタリング対応
  */
 
 class OrderManager {
     constructor() {
         this.orders = [];
-        this.filteredOrders = [];
-        this.currentFilter = "all";
-        this.currentSort = "newest";
+        this.currentFilters = {
+            status: [],
+            startDate: '',
+            endDate: '',
+            search: '',
+            sort: 'newest'
+        };
         this.pollingInterval = null;
         this.pollingIntervalTime = 30000;
         this.isPollingActive = false;
+        this.isLoading = false; // ローディング状態フラグ
+        this.pendingRequest = null; // 進行中のリクエストを管理
         this.elements = {};
+        this.searchTimeout = null;
+        this.dateTimeout = null; // 日付フィルタ用のデバウンスタイマー
         this.init();
     }
 
@@ -23,9 +31,12 @@ class OrderManager {
                 return;
             }
             this.initializeElements();
+            this.restoreFiltersFromURL();
             this.attachEventListeners();
             await this.loadOrders();
             this.startPolling();
+            
+            // ページ表示/非表示の監視
             document.addEventListener("visibilitychange", () => {
                 if (document.hidden) {
                     this.stopPolling();
@@ -33,6 +44,12 @@ class OrderManager {
                     this.startPolling();
                     this.loadOrders();
                 }
+            });
+
+            // ブラウザの戻る/進むボタン対応
+            window.addEventListener('popstate', () => {
+                this.restoreFiltersFromURL();
+                this.loadOrders();
             });
         } catch (error) {
             console.error("初期化エラー:", error);
@@ -42,8 +59,15 @@ class OrderManager {
 
     initializeElements() {
         this.elements.ordersGrid = document.getElementById("ordersGrid");
-        this.elements.filterStatus = document.getElementById("statusFilter");
         this.elements.sortOrder = document.getElementById("sortOrder");
+        this.elements.searchInput = document.getElementById("searchInput");
+        this.elements.startDate = document.getElementById("startDate");
+        this.elements.endDate = document.getElementById("endDate");
+        this.elements.statusCheckboxes = document.querySelectorAll(".status-checkbox");
+        this.elements.clearSearchBtn = document.getElementById("clearSearchBtn");
+        this.elements.clearDateBtn = document.getElementById("clearDateBtn");
+        this.elements.resetFiltersBtn = document.getElementById("resetFiltersBtn");
+        this.elements.searchResultsInfo = document.getElementById("searchResultsInfo");
         this.elements.totalCount = document.getElementById("totalOrdersCount");
         this.elements.pendingCount = document.getElementById("pendingOrdersCount");
         this.elements.preparingCount = document.getElementById("preparingCount");
@@ -60,17 +84,76 @@ class OrderManager {
     }
 
     attachEventListeners() {
-        this.elements.filterStatus.addEventListener("change", () => {
-            this.currentFilter = this.elements.filterStatus.value;
-            this.filterAndDisplayOrders();
+        // ステータスチェックボックス
+        this.elements.statusCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener("change", () => {
+                this.updateFiltersAndLoad();
+            });
         });
+
+        // ソート順
         this.elements.sortOrder.addEventListener("change", () => {
-            this.currentSort = this.elements.sortOrder.value;
-            this.filterAndDisplayOrders();
+            this.currentFilters.sort = this.elements.sortOrder.value;
+            this.updateFiltersAndLoad();
         });
+
+        // 検索入力（デバウンス）
+        this.elements.searchInput.addEventListener("input", (e) => {
+            clearTimeout(this.searchTimeout);
+            const value = e.target.value.trim();
+            
+            // クリアボタンの表示切替
+            this.elements.clearSearchBtn.style.display = value ? 'block' : 'none';
+            
+            this.searchTimeout = setTimeout(() => {
+                this.currentFilters.search = value;
+                this.updateFiltersAndLoad();
+            }, 500); // 500ms のデバウンス
+        });
+
+        // 検索クリアボタン
+        this.elements.clearSearchBtn.addEventListener("click", () => {
+            this.elements.searchInput.value = '';
+            this.currentFilters.search = '';
+            this.elements.clearSearchBtn.style.display = 'none';
+            this.updateFiltersAndLoad();
+        });
+
+        // 日付フィルタ（お客様の注文履歴と同じく、changeイベントで即座に適用）
+        this.elements.startDate.addEventListener("change", () => {
+            const newValue = this.elements.startDate.value;
+            console.log('📅 Start date changed:', newValue);
+            this.currentFilters.startDate = newValue;
+            this.updateFiltersAndLoad();
+        });
+
+        this.elements.endDate.addEventListener("change", () => {
+            const newValue = this.elements.endDate.value;
+            console.log('📅 End date changed:', newValue);
+            this.currentFilters.endDate = newValue;
+            this.updateFiltersAndLoad();
+        });
+
+        // 日付クリアボタン
+        this.elements.clearDateBtn.addEventListener("click", () => {
+            this.elements.startDate.value = '';
+            this.elements.endDate.value = '';
+            this.currentFilters.startDate = '';
+            this.currentFilters.endDate = '';
+            this.updateFiltersAndLoad();
+        });
+
+        // フィルタリセットボタン
+        this.elements.resetFiltersBtn.addEventListener("click", () => {
+            this.resetFilters();
+        });
+
+        // 更新ボタン
         this.elements.refreshBtn.addEventListener("click", () => {
             this.loadOrders();
         });
+
+        // モーダル
         const closeModal = () => {
             this.elements.modal.classList.remove("active");
         };
@@ -84,14 +167,179 @@ class OrderManager {
         });
     }
 
+    /**
+     * URLからフィルター状態を復元
+     */
+    restoreFiltersFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        
+        // ステータス
+        const statusParam = params.get('status');
+        if (statusParam) {
+            this.currentFilters.status = statusParam.split(',');
+            this.elements.statusCheckboxes.forEach(cb => {
+                cb.checked = this.currentFilters.status.includes(cb.value);
+            });
+        } else {
+            // デフォルト: 未完了のステータスのみ
+            this.currentFilters.status = ['pending', 'confirmed', 'preparing', 'ready'];
+            this.elements.statusCheckboxes.forEach(cb => {
+                cb.checked = this.currentFilters.status.includes(cb.value);
+            });
+        }
+        
+        // 日付
+        this.currentFilters.startDate = params.get('start_date') || '';
+        this.currentFilters.endDate = params.get('end_date') || '';
+        this.elements.startDate.value = this.currentFilters.startDate;
+        this.elements.endDate.value = this.currentFilters.endDate;
+        
+        // 検索
+        this.currentFilters.search = params.get('q') || '';
+        this.elements.searchInput.value = this.currentFilters.search;
+        this.elements.clearSearchBtn.style.display = this.currentFilters.search ? 'block' : 'none';
+        
+        // ソート
+        this.currentFilters.sort = params.get('sort') || 'newest';
+        this.elements.sortOrder.value = this.currentFilters.sort;
+    }
+
+    /**
+     * フィルター状態をURLに反映
+     */
+    updateURLParams() {
+        const params = new URLSearchParams();
+        
+        // ステータス
+        const checkedStatuses = Array.from(this.elements.statusCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+        
+        this.currentFilters.status = checkedStatuses;
+        
+        if (checkedStatuses.length > 0 && checkedStatuses.length < 6) {
+            params.set('status', checkedStatuses.join(','));
+        }
+        
+        // 日付
+        if (this.currentFilters.startDate) {
+            params.set('start_date', this.currentFilters.startDate);
+        }
+        if (this.currentFilters.endDate) {
+            params.set('end_date', this.currentFilters.endDate);
+        }
+        
+        // 検索
+        if (this.currentFilters.search) {
+            params.set('q', this.currentFilters.search);
+        }
+        
+        // ソート
+        if (this.currentFilters.sort !== 'newest') {
+            params.set('sort', this.currentFilters.sort);
+        }
+        
+        // URLを更新（ページリロードなし）
+        const newURL = params.toString() 
+            ? `${window.location.pathname}?${params.toString()}`
+            : window.location.pathname;
+        
+        window.history.pushState({}, '', newURL);
+    }
+
+    /**
+     * フィルター更新とデータ読み込み
+     */
+    updateFiltersAndLoad() {
+        this.updateURLParams();
+        this.loadOrders();
+    }
+
+    /**
+     * フィルターをリセット
+     */
+    resetFilters() {
+        // デフォルト値に戻す
+        this.elements.statusCheckboxes.forEach(cb => {
+            cb.checked = ['pending', 'confirmed', 'preparing', 'ready'].includes(cb.value);
+        });
+        this.elements.startDate.value = '';
+        this.elements.endDate.value = '';
+        this.elements.searchInput.value = '';
+        this.elements.sortOrder.value = 'newest';
+        this.elements.clearSearchBtn.style.display = 'none';
+        
+        this.currentFilters = {
+            status: ['pending', 'confirmed', 'preparing', 'ready'],
+            startDate: '',
+            endDate: '',
+            search: '',
+            sort: 'newest'
+        };
+        
+        this.updateFiltersAndLoad();
+    }
+
     async loadOrders() {
         try {
+            // 既に進行中のリクエストがある場合はキャンセル
+            if (this.pendingRequest) {
+                console.log('⏭️ Cancelling previous request');
+                this.pendingRequest.cancelled = true;
+            }
+            
+            // 新しいリクエストオブジェクトを作成
+            const currentRequest = { cancelled: false };
+            this.pendingRequest = currentRequest;
+            
+            console.log('🔄 Loading orders started...');
+            this.isLoading = true;
             this.showLoading();
             this.hideError();
+            
             const token = localStorage.getItem("authToken");
-            const response = await fetch("/api/store/orders", {
+            
+            // クエリパラメータを構築
+            const params = new URLSearchParams();
+            
+            if (this.currentFilters.status.length > 0) {
+                params.set('status', this.currentFilters.status.join(','));
+            }
+            if (this.currentFilters.startDate) {
+                params.set('start_date', this.currentFilters.startDate);
+            }
+            if (this.currentFilters.endDate) {
+                params.set('end_date', this.currentFilters.endDate);
+            }
+            if (this.currentFilters.search) {
+                params.set('q', this.currentFilters.search);
+            }
+            if (this.currentFilters.sort) {
+                params.set('sort', this.currentFilters.sort);
+            }
+            
+            // 大量データ対応: per_pageを1000に設定
+            params.set('per_page', '1000');
+            
+            const url = `/api/store/orders?${params.toString()}`;
+            console.log('===== API Request Debug =====');
+            console.log('URL:', url);
+            console.log('Current Filters:', this.currentFilters);
+            console.log('URL Params:', Object.fromEntries(params));
+            console.log('=============================');
+            
+            const startTime = performance.now(); // パフォーマンス計測開始
+            
+            const response = await fetch(url, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
+            
+            // リクエストがキャンセルされた場合は処理を中断
+            if (currentRequest.cancelled) {
+                console.log('❌ Request was cancelled');
+                return;
+            }
+            
             if (!response.ok) {
                 if (response.status === 401) {
                     localStorage.removeItem("authToken");
@@ -100,8 +348,21 @@ class OrderManager {
                 }
                 throw new Error("注文の取得に失敗しました");
             }
+            
             const data = await response.json();
-            console.log("API Response:", data); // デバッグ用
+            
+            // リクエストがキャンセルされた場合は処理を中断
+            if (currentRequest.cancelled) {
+                console.log('❌ Request was cancelled after fetch');
+                return;
+            }
+            
+            const endTime = performance.now(); // パフォーマンス計測終了
+            console.log(`✅ Orders loaded in ${(endTime - startTime).toFixed(2)}ms`);
+            console.log('API Response:', {
+                totalOrders: data.total || data.length,
+                ordersCount: data.orders ? data.orders.length : (Array.isArray(data) ? data.length : 0)
+            });
             
             // レスポンスが配列であることを確認
             if (Array.isArray(data)) {
@@ -116,11 +377,16 @@ class OrderManager {
             // データ変換: APIレスポンスをフロントエンド用に整形
             this.orders = this.orders.map(order => this.normalizeOrder(order));
             
-            this.filterAndDisplayOrders();
+            this.displayOrders();
             this.updateCounts();
+            this.updateSearchResultsInfo(data.total || this.orders.length);
+            this.isLoading = false;
+            this.pendingRequest = null;
             this.hideLoading();
         } catch (error) {
             console.error("注文読み込みエラー:", error);
+            this.isLoading = false;
+            this.pendingRequest = null;
             this.hideLoading();
             this.showError(error.message);
         }
@@ -144,31 +410,67 @@ class OrderManager {
         };
     }
 
-    filterAndDisplayOrders() {
-        if (this.currentFilter === "all") {
-            this.filteredOrders = [...this.orders];
-        } else {
-            this.filteredOrders = this.orders.filter(order => order.status === this.currentFilter);
-        }
-        this.filteredOrders.sort((a, b) => {
-            const dateA = new Date(a.ordered_at);
-            const dateB = new Date(b.ordered_at);
-            return this.currentSort === "newest" ? dateB - dateA : dateA - dateB;
-        });
-        this.displayOrders();
-    }
-
     displayOrders() {
         this.elements.ordersGrid.innerHTML = "";
-        if (this.filteredOrders.length === 0) {
+        if (this.orders.length === 0) {
             this.elements.emptyState.style.display = "block";
             return;
         }
         this.elements.emptyState.style.display = "none";
-        this.filteredOrders.forEach(order => {
+        
+        // パフォーマンス最適化: DocumentFragmentを使用
+        const fragment = document.createDocumentFragment();
+        this.orders.forEach(order => {
             const card = this.createOrderCard(order);
-            this.elements.ordersGrid.appendChild(card);
+            fragment.appendChild(card);
         });
+        this.elements.ordersGrid.appendChild(fragment);
+    }
+
+    /**
+     * 検索結果情報を更新
+     */
+    updateSearchResultsInfo(total) {
+        const hasActiveFilters = 
+            this.currentFilters.search ||
+            this.currentFilters.startDate ||
+            this.currentFilters.endDate ||
+            this.currentFilters.status.length !== 4; // デフォルト以外
+        
+        if (!hasActiveFilters) {
+            this.elements.searchResultsInfo.style.display = 'none';
+            return;
+        }
+        
+        this.elements.searchResultsInfo.style.display = 'flex';
+        const resultsCount = this.elements.searchResultsInfo.querySelector('.results-count');
+        const activeFilters = this.elements.searchResultsInfo.querySelector('.active-filters');
+        
+        resultsCount.textContent = `${total}件の注文が見つかりました`;
+        
+        // アクティブなフィルタを表示
+        const filters = [];
+        if (this.currentFilters.search) {
+            filters.push(`検索: "${this.currentFilters.search}"`);
+        }
+        if (this.currentFilters.startDate || this.currentFilters.endDate) {
+            const dateRange = `${this.currentFilters.startDate || '開始日未指定'} 〜 ${this.currentFilters.endDate || '終了日未指定'}`;
+            filters.push(`期間: ${dateRange}`);
+        }
+        if (this.currentFilters.status.length > 0 && this.currentFilters.status.length < 6) {
+            const statusNames = {
+                'pending': '未確認',
+                'confirmed': '確認済み',
+                'preparing': '準備中',
+                'ready': '受取可能',
+                'completed': '完了',
+                'cancelled': 'キャンセル'
+            };
+            const statusLabels = this.currentFilters.status.map(s => statusNames[s]).join(', ');
+            filters.push(`ステータス: ${statusLabels}`);
+        }
+        
+        activeFilters.textContent = filters.length > 0 ? `(${filters.join(' / ')})` : '';
     }
 
     createOrderCard(order) {
@@ -242,7 +544,7 @@ class OrderManager {
             if (index !== -1) {
                 this.orders[index] = this.normalizeOrder(updatedOrder);
             }
-            this.filterAndDisplayOrders();
+            this.displayOrders();
             this.updateCounts();
             this.showToast("success", "更新成功", "ステータスを更新しました");
         } catch (error) {

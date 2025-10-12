@@ -18,22 +18,25 @@
         <div class="content-wrapper">
             <!-- ページヘッダー -->
             <section class="page-header">
-                <div class="header-content">
+                <div class="page-header-content">
                     <div>
                         <h2>📦 注文管理</h2>
+                        <p>リアルタイムな注文状況の把握</p>
+                    </div>
+                    <div class="header-stats">
                         <div class="header-badges">
                             <span class="badge badge-info">全: <span id="totalOrdersCount">0</span>件</span>
                             <span class="badge badge-warning">未確認: <span id="pendingOrdersCount">0</span>件</span>
                             <span class="badge badge-purple">準備中: <span id="preparingCount">0</span>件</span>
                             <span class="badge badge-success">受取可: <span id="readyCount">0</span>件</span>
                         </div>
-                    </div>
-                    <div class="header-actions">
-                        <button class="btn btn-secondary" id="refreshBtn" title="最新の状態に更新">
-                            🔄 更新
-                        </button>
-                        <div class="auto-refresh-status" id="autoRefreshStatus">
-                            <span class="status-text" id="autoRefreshText">自動更新: 停止中</span>
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" id="refreshBtn" title="最新の状態に更新">
+                                🔄 更新
+                            </button>
+                            <div class="auto-refresh-status" id="autoRefreshStatus">
+                                <span class="status-text" id="autoRefreshText">自動更新: 停止中</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -41,25 +44,95 @@
 
             <!-- フィルターセクション -->
             <div class="filter-section">
-                <div class="filter-group">
-                    <label for="statusFilter">ステータス:</label>
-                    <select id="statusFilter" class="filter-select">
-                        <option value="all">すべて</option>
-                        <option value="pending">未確認</option>
-                        <option value="confirmed">確認済み</option>
-                        <option value="preparing">準備中</option>
-                        <option value="ready">受取可能</option>
-                        <option value="completed">完了</option>
-                        <option value="cancelled">キャンセル</option>
-                    </select>
+                <!-- 検索バー（最優先の配置） -->
+                <div class="filter-group filter-search-primary">
+                    <label for="searchInput">🔍 キーワード検索</label>
+                    <div class="search-input-wrapper">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            class="filter-input search-input" 
+                            placeholder="顧客名、メニュー名で検索..."
+                            autocomplete="off"
+                        >
+                        <button class="btn-clear" id="clearSearchBtn" title="検索をクリア" style="display: none;">
+                            ✕
+                        </button>
+                    </div>
                 </div>
-                <div class="filter-group">
-                    <label for="sortOrder">並び順:</label>
+
+                <!-- ステータスフィルタ（複数選択） -->
+                <div class="filter-group filter-status">
+                    <label>📋 注文ステータス</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="status-checkbox" value="pending" checked>
+                            <span>未確認</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="status-checkbox" value="confirmed" checked>
+                            <span>確認済み</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="status-checkbox" value="preparing" checked>
+                            <span>準備中</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="status-checkbox" value="ready" checked>
+                            <span>受取可能</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="status-checkbox" value="completed">
+                            <span>完了</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="status-checkbox" value="cancelled">
+                            <span>キャンセル</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 日付範囲フィルタ（視覚的にグループ化） -->
+                <div class="filter-group filter-date-range">
+                    <label>📅 注文期間</label>
+                    <div class="date-range-wrapper">
+                        <div class="date-input-group">
+                            <input type="date" id="startDate" class="filter-input date-input" placeholder="開始日">
+                        </div>
+                        <span class="date-separator">〜</span>
+                        <div class="date-input-group">
+                            <input type="date" id="endDate" class="filter-input date-input" placeholder="終了日">
+                        </div>
+                        <button class="btn-clear btn-clear-date" id="clearDateBtn" title="期間をクリア">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ソート順 -->
+                <div class="filter-group filter-sort">
+                    <label for="sortOrder">📊 並び順</label>
                     <select id="sortOrder" class="filter-select">
                         <option value="newest">新しい順</option>
                         <option value="oldest">古い順</option>
+                        <option value="price_high">金額の高い順</option>
+                        <option value="price_low">金額の低い順</option>
                     </select>
                 </div>
+
+                <!-- フィルタリセットボタン -->
+                <div class="filter-group filter-actions">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-secondary btn-reset" id="resetFiltersBtn">
+                        🔄 すべてリセット
+                    </button>
+                </div>
+            </div>
+
+            <!-- 検索結果表示 -->
+            <div class="search-results-info" id="searchResultsInfo" style="display: none;">
+                <span class="results-count"></span>
+                <span class="active-filters"></span>
             </div>
 
             <!-- ローディング表示 -->
