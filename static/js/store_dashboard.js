@@ -8,6 +8,71 @@ class DashboardManager {
         this.data = null;
         this.isLoading = false;
         this.chart = null; // Chart.jsインスタンスを保存
+        this.pollingInterval = null; // ポーリング用のインターバルID
+        this.pollingIntervalTime = 60000; // 60秒ごとに更新
+        this.isPageVisible = true; // ページの可視性状態
+    }
+
+    /**
+     * ポーリングを開始
+     */
+    startPolling() {
+        // 既存のインターバルをクリア
+        this.stopPolling();
+        
+        // 60秒ごとにデータを更新
+        this.pollingInterval = setInterval(() => {
+            if (this.isPageVisible) {
+                console.log('Auto-refreshing dashboard data...');
+                this.fetchData(true); // 自動更新フラグを渡す
+            }
+        }, this.pollingIntervalTime);
+        
+        console.log('Polling started (interval: 60s)');
+    }
+
+    /**
+     * ポーリングを停止
+     */
+    stopPolling() {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+            console.log('Polling stopped');
+        }
+    }
+
+    /**
+     * Page Visibility APIでページの可視性を監視
+     */
+    setupVisibilityListener() {
+        document.addEventListener('visibilitychange', () => {
+            this.isPageVisible = !document.hidden;
+            
+            if (this.isPageVisible) {
+                console.log('Page became visible - resuming polling');
+                // ページが再びアクティブになったら即座にデータを更新
+                this.fetchData(true);
+            } else {
+                console.log('Page became hidden - polling will pause');
+            }
+        });
+    }
+
+    /**
+     * 最終更新時刻を更新
+     */
+    updateLastUpdatedTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timeString = `${hours}:${minutes}:${seconds}`;
+        
+        const timeElement = document.getElementById('lastUpdatedTime');
+        if (timeElement) {
+            timeElement.textContent = timeString;
+        }
     }
 
     /**
@@ -54,29 +119,43 @@ class DashboardManager {
 
     /**
      * ダッシュボードデータを取得
+     * @param {boolean} isAutoRefresh - 自動更新かどうか（trueの場合、UIフィードバックを控えめにする）
      */
-    async fetchData() {
+    async fetchData(isAutoRefresh = false) {
         if (this.isLoading) {
             console.log('Already loading...');
             return;
         }
 
         this.isLoading = true;
-        this.showLoading(true);
+        
+        // 自動更新の場合は控えめなローディング表示
+        if (!isAutoRefresh) {
+            this.showLoading(true);
+        }
         this.hideError();
 
         try {
             const data = await ApiClient.get('/store/dashboard');
             this.data = data;
             this.renderAll();
+            this.updateLastUpdatedTime(); // 最終更新時刻を更新
             console.log('Dashboard data loaded successfully:', data);
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
-            this.showError('ダッシュボードデータの読み込みに失敗しました。ページを再読み込みしてください。');
-            UI.showAlert('データの読み込みに失敗しました', 'error');
+            
+            // 自動更新時はエラーメッセージを控えめに
+            if (!isAutoRefresh) {
+                this.showError('ダッシュボードデータの読み込みに失敗しました。ページを再読み込みしてください。');
+                UI.showAlert('データの読み込みに失敗しました', 'error');
+            } else {
+                console.warn('Auto-refresh failed, will retry on next interval');
+            }
         } finally {
             this.isLoading = false;
-            this.showLoading(false);
+            if (!isAutoRefresh) {
+                this.showLoading(false);
+            }
         }
     }
 
@@ -343,11 +422,22 @@ class DashboardManager {
     }
 
     /**
-     * データを再読み込み
+     * データを再読み込み（手動更新）
      */
     async refresh() {
-        await this.fetchData();
+        await this.fetchData(false); // 手動更新なので false
         UI.showAlert('データを更新しました', 'success');
+    }
+
+    /**
+     * クリーンアップ処理
+     */
+    cleanup() {
+        this.stopPolling();
+        if (this.chart) {
+            this.chart.destroy();
+            this.chart = null;
+        }
     }
 }
 
@@ -369,6 +459,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ダッシュボードデータを読み込み
     await dashboardManager.fetchData();
+    
+    // Page Visibility APIを設定
+    dashboardManager.setupVisibilityListener();
+    
+    // 自動更新ポーリングを開始
+    dashboardManager.startPolling();
+});
+
+/**
+ * ページアンロード時のクリーンアップ
+ */
+window.addEventListener('beforeunload', () => {
+    dashboardManager.cleanup();
 });
 
 /**
