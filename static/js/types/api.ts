@@ -1,114 +1,141 @@
-/* Auto-generated TypeScript types from Pydantic schemas */
-/* DO NOT EDIT MANUALLY - Run generate-types script to update */
+/**
+ * Auto-generated TypeScript type definitions
+ * Generated from: /api/openapi.json
+ * DO NOT EDIT MANUALLY
+ */
 
-export interface StoreCreate {
-  name: string;
-  address: string;
-  phone_number: string;
-  email: string;
-  opening_time: string;
-  closing_time: string;
-  description?: any;
-  image_url?: any;
-  is_active?: boolean;
+export interface YesterdayComparison {
+  /** Orders Change */
+  orders_change: number;
+  /** Orders Change Percent */
+  orders_change_percent: number;
+  /** Revenue Change */
+  revenue_change: number;
+  /** Revenue Change Percent */
+  revenue_change_percent: number;
 }
 
-export interface StoreUpdate {
-  name?: any;
-  address?: any;
-  phone_number?: any;
-  email?: any;
-  opening_time?: any;
-  closing_time?: any;
-  description?: any;
-  image_url?: any;
-  is_active?: any;
+export interface PopularMenu {
+  /** Menu Id */
+  menu_id: number;
+  /** Menu Name */
+  menu_name: string;
+  /** Order Count */
+  order_count: number;
+  /** Total Revenue */
+  total_revenue: number;
 }
 
-export interface StoreResponse {
-  name: string;
-  address: string;
-  phone_number: string;
-  email: string;
-  opening_time: string;
-  closing_time: string;
-  description?: any;
-  image_url?: any;
-  is_active?: boolean;
+export interface HourlyOrderData {
+  /** Hour */
+  hour: number;
+  /** Order Count */
+  order_count: number;
+}
+
+export interface OrderSummary {
+  /** Total Orders */
+  total_orders: number;
+  /** Pending Orders */
+  pending_orders: number;
+  /** Confirmed Orders */
+  confirmed_orders: number;
+  /** Preparing Orders */
+  preparing_orders: number;
+  /** Ready Orders */
+  ready_orders: number;
+  /** Completed Orders */
+  completed_orders: number;
+  /** Cancelled Orders */
+  cancelled_orders: number;
+  /** Total Sales */
+  total_sales: number;
+  /** Today Revenue */
+  today_revenue: number;
+  /** Average Order Value */
+  average_order_value: number;
+  yesterday_comparison: YesterdayComparison;
+  /** Popular Menus */
+  popular_menus: PopularMenu[];
+  /** Hourly Orders */
+  hourly_orders: HourlyOrderData[];
+}
+
+export interface UserResponse {
+  /** Id */
   id: number;
+  /** Username */
+  username: string;
+  /** Email */
+  email: string;
+  /** Full Name */
+  full_name: string;
+  /** Role */
+  role: string;
+  /** Is Active */
+  is_active: boolean;
+  /** Store Id */
+  store_id?: any;
+  /** Created At */
   created_at: string;
-  updated_at: string;
-}
-
-export interface StoreListResponse {
-  stores: any[];
-  total: number;
-}
-
-export interface MenuCreate {
-  name: string;
-  price: number;
-  description?: any;
-  image_url?: any;
-  is_available?: boolean;
-  store_id: number;
-}
-
-export interface MenuUpdate {
-  name?: any;
-  price?: any;
-  description?: any;
-  image_url?: any;
-  is_available?: any;
+  /** User Roles */
+  user_roles?: UserRoleResponse[];
+  store?: any;
 }
 
 export interface MenuResponse {
+  /** Name */
   name: string;
+  /** Price */
   price: number;
+  /** Description */
   description?: any;
+  /** Image Url */
   image_url?: any;
+  /** Is Available */
   is_available?: boolean;
+  /** Id */
   id: number;
+  /** Store Id */
   store_id: number;
+  /** Created At */
   created_at: string;
+  /** Updated At */
   updated_at: string;
   store?: any;
 }
 
-export interface OrderCreate {
-  menu_id: number;
-  quantity: number;
-  delivery_time?: any;
-  notes?: any;
-  store_id: number;
-}
-
 export interface OrderResponse {
+  /** Id */
   id: number;
+  /** User Id */
   user_id: number;
+  /** Menu Id */
   menu_id: number;
+  /** Store Id */
   store_id: number;
+  /** Quantity */
   quantity: number;
+  /** Total Price */
   total_price: number;
+  /** Status */
   status: string;
+  /** Delivery Time */
   delivery_time: any;
+  /** Notes */
   notes: any;
+  /** Ordered At */
   ordered_at: string;
+  /** Updated At */
   updated_at: string;
-  menu: any;
+  menu: MenuResponse;
   store?: any;
   user?: any;
 }
 
-export interface UserResponse {
-  id: number;
-  username: string;
-  email: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-  store_id?: any;
-  created_at: string;
-  store?: any;
+export interface SuccessResponse {
+  /** Success */
+  success?: boolean;
+  /** Message */
+  message: string;
 }
-
