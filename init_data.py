@@ -61,12 +61,12 @@ def insert_initial_data():
         # 3. メニューデータ
         print("  - Inserting menus...")
         menus = [
-            Menu(name="から揚げ弁当", price=500, description="ジューシーなから揚げがたっぷり。", image_url="https://via.placeholder.com/300x200?text=Karaage", store_id=default_store.id),
-            Menu(name="焼き肉弁当", price=700, description="特製タレの焼き肉が自慢。", image_url="https://via.placeholder.com/300x200?text=Yakiniku", store_id=default_store.id),
-            Menu(name="幕の内弁当", price=600, description="バランスの良い和食弁当。", image_url="https://via.placeholder.com/300x200?text=Makunouchi", store_id=default_store.id),
-            Menu(name="サーモン弁当", price=800, description="新鮮なサーモンを使用。", image_url="https://via.placeholder.com/300x200?text=Salmon", store_id=default_store.id),
-            Menu(name="ベジタリアン弁当", price=550, description="野菜たっぷりヘルシー弁当。", image_url="https://via.placeholder.com/300x200?text=Vegetarian", store_id=default_store.id),
-            Menu(name="特上寿司弁当", price=1200, description="厳選ネタの特上寿司。", image_url="https://via.placeholder.com/300x200?text=Sushi", store_id=default_store.id)
+            Menu(name="から揚げ弁当", price=500, description="ジューシーなから揚げがたっぷり。", image_url="/static/images/menus/karaage.jpg", store_id=default_store.id),
+            Menu(name="焼き肉弁当", price=700, description="特製タレの焼き肉が自慢。", image_url="/static/images/menus/yakiniku.jpg", store_id=default_store.id),
+            Menu(name="幕の内弁当", price=600, description="バランスの良い和食弁当。", image_url="/static/images/menus/makunouchi.jpg", store_id=default_store.id),
+            Menu(name="サーモン弁当", price=800, description="新鮮なサーモンを使用。", image_url="/static/images/menus/salmon.jpg", store_id=default_store.id),
+            Menu(name="ベジタリアン弁当", price=550, description="野菜たっぷりヘルシー弁当。", image_url="/static/images/menus/vegetarian.jpg", store_id=default_store.id),
+            Menu(name="特上寿司弁当", price=1200, description="厳選ネタの特上寿司。", image_url="/static/images/menus/sushi.jpg", store_id=default_store.id)
         ]
         db.add_all(menus)
         db.commit()

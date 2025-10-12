@@ -119,9 +119,10 @@ def create_order(
     # 合計金額を計算
     total_price = menu.price * order.quantity
     
-    # 注文を作成
+    # 注文を作成（store_idをメニューから取得）
     db_order = Order(
         user_id=current_user.id,
+        store_id=menu.store_id,  # メニューの店舗IDを設定
         menu_id=order.menu_id,
         quantity=order.quantity,
         total_price=total_price,

@@ -306,8 +306,9 @@ class OrderBase(BaseModel):
 
 
 class OrderCreate(OrderBase):
-    """注文作成時のリクエスト"""
-    store_id: int = Field(..., ge=1, description="注文先店舗ID")
+    """注文作成時のリクエスト（お客様用）"""
+    # store_idはメニューから自動取得されるため不要
+    pass
 
 
 class OrderStatusUpdate(BaseModel):
