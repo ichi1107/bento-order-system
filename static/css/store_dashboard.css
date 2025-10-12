@@ -684,6 +684,20 @@
     font-style: italic;
 }
 
+/* ===== チャートコンテナ ===== */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.chart-container canvas {
+    max-height: 100%;
+}
+
 /* ===== プリント用スタイル ===== */
 @media print {
     .action-buttons,

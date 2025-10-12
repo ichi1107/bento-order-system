@@ -6,6 +6,8 @@
     <title>店舗ダッシュボード - 弁当注文システム</title>
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/store_dashboard.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -98,9 +100,8 @@
 
                 <div class="dashboard-section">
                     <h3>📈 今週の売上グラフ</h3>
-                    <div class="chart-placeholder">
-                        <p>📊 売上チャートエリア</p>
-                        <p class="chart-note">グラフライブラリ統合予定</p>
+                    <div class="chart-container">
+                        <canvas id="weeklySalesChart"></canvas>
                     </div>
                 </div>
             </section>
