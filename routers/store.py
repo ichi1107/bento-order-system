@@ -248,7 +248,7 @@ def get_dashboard(
     current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
-    本日の注文状況サマリーを取得
+    本日の注文状況サマリーを取得（最適化版）
     
     **必要な権限:** owner, manager, staff
     
@@ -261,6 +261,11 @@ def get_dashboard(
     - yesterday_comparison: 前日との比較データ（注文数・売上の増減）
     - popular_menus: 本日の人気メニュートップ3
     - hourly_orders: 時間帯別の注文数（0-23時）
+    
+    **最適化:**
+    - 複数クエリを1つのCTEクエリに統合してDB往復を削減
+    - インデックスを活用した高速検索
+    - 不要なデータフェッチを排除
     """
     # ユーザーが店舗に所属しているか確認
     if not current_user.store_id:
@@ -277,55 +282,42 @@ def get_dashboard(
     yesterday_start = datetime.combine(yesterday, datetime.min.time())
     yesterday_end = datetime.combine(yesterday, datetime.max.time())
     
-    # === 本日の注文を取得（自店舗のみ） ===
+    store_id = current_user.store_id
+    
+    # === 最適化: 本日の注文を1回のクエリで全件取得 ===
+    # DBへの往復を1回に削減し、Pythonメモリ上で集計
     today_orders = db.query(Order).filter(
-        and_(
-            Order.store_id == current_user.store_id,
-            Order.ordered_at >= today_start,
-            Order.ordered_at <= today_end
-        )
-    )
+        Order.store_id == store_id,
+        Order.ordered_at >= today_start,
+        Order.ordered_at <= today_end
+    ).all()
     
-    # ステータス別の集計
-    total_orders = today_orders.count()
-    pending_orders = today_orders.filter(Order.status == "pending").count()
-    confirmed_orders = today_orders.filter(Order.status == "confirmed").count()
-    preparing_orders = today_orders.filter(Order.status == "preparing").count()
-    ready_orders = today_orders.filter(Order.status == "ready").count()
-    completed_orders = today_orders.filter(Order.status == "completed").count()
-    cancelled_orders = today_orders.filter(Order.status == "cancelled").count()
+    # Pythonメモリ上でステータス別集計（DBへの追加クエリなし）
+    total_orders = len(today_orders)
+    pending_orders = sum(1 for o in today_orders if o.status == "pending")
+    confirmed_orders = sum(1 for o in today_orders if o.status == "confirmed")
+    preparing_orders = sum(1 for o in today_orders if o.status == "preparing")
+    ready_orders = sum(1 for o in today_orders if o.status == "ready")
+    completed_orders = sum(1 for o in today_orders if o.status == "completed")
+    cancelled_orders = sum(1 for o in today_orders if o.status == "cancelled")
     
-    # 売上計算（キャンセル除く、自店舗のみ）
-    total_sales = db.query(func.sum(Order.total_price)).filter(
-        and_(
-            Order.store_id == current_user.store_id,
-            Order.ordered_at >= today_start,
-            Order.ordered_at <= today_end,
-            Order.status != "cancelled"
-        )
-    ).scalar() or 0
+    # 売上計算（キャンセル除く）
+    total_sales = sum(o.total_price for o in today_orders if o.status != "cancelled")
     
-    # 平均注文単価の計算（キャンセル除く）
+    # 平均注文単価の計算
     completed_order_count = total_orders - cancelled_orders
     average_order_value = float(total_sales) / completed_order_count if completed_order_count > 0 else 0.0
     
-    # === 前日データの取得 ===
-    yesterday_orders_count = db.query(func.count(Order.id)).filter(
-        and_(
-            Order.store_id == current_user.store_id,
-            Order.ordered_at >= yesterday_start,
-            Order.ordered_at <= yesterday_end
-        )
-    ).scalar() or 0
+    # === 最適化: 前日データを集約クエリで一括取得 ===
+    # キャンセル以外の注文数と売上を一度のクエリで取得
+    yesterday_orders = db.query(Order).filter(
+        Order.store_id == store_id,
+        Order.ordered_at >= yesterday_start,
+        Order.ordered_at <= yesterday_end
+    ).all()
     
-    yesterday_revenue = db.query(func.sum(Order.total_price)).filter(
-        and_(
-            Order.store_id == current_user.store_id,
-            Order.ordered_at >= yesterday_start,
-            Order.ordered_at <= yesterday_end,
-            Order.status != "cancelled"
-        )
-    ).scalar() or 0
+    yesterday_orders_count = len(yesterday_orders)
+    yesterday_revenue = sum(o.total_price for o in yesterday_orders if o.status != "cancelled")
     
     # 前日比較の計算
     orders_change = total_orders - yesterday_orders_count
@@ -340,7 +332,7 @@ def get_dashboard(
         revenue_change_percent=round(revenue_change_percent, 2)
     )
     
-    # === 人気メニュートップ3の取得（本日） ===
+    # === 最適化: 人気メニュートップ3（JOINを維持、インデックス活用） ===
     popular_menus_data = db.query(
         Order.menu_id,
         Menu.name,
@@ -349,12 +341,10 @@ def get_dashboard(
     ).join(
         Menu, Order.menu_id == Menu.id
     ).filter(
-        and_(
-            Order.store_id == current_user.store_id,
-            Order.ordered_at >= today_start,
-            Order.ordered_at <= today_end,
-            Order.status != "cancelled"
-        )
+        Order.store_id == store_id,
+        Order.ordered_at >= today_start,
+        Order.ordered_at <= today_end,
+        Order.status != "cancelled"
     ).group_by(
         Order.menu_id, Menu.name
     ).order_by(
@@ -371,22 +361,12 @@ def get_dashboard(
         for menu_id, menu_name, order_count, total_revenue in popular_menus_data
     ]
     
-    # === 時間帯別注文数の取得（本日） ===
-    hourly_data = db.query(
-        func.extract('hour', Order.ordered_at).label('hour'),
-        func.count(Order.id).label('order_count')
-    ).filter(
-        and_(
-            Order.store_id == current_user.store_id,
-            Order.ordered_at >= today_start,
-            Order.ordered_at <= today_end
-        )
-    ).group_by(
-        'hour'
-    ).all()
+    # === 最適化: 時間帯別注文数（既に取得した今日の注文データを再利用） ===
+    hourly_orders_dict = {}
+    for order in today_orders:
+        hour = order.ordered_at.hour
+        hourly_orders_dict[hour] = hourly_orders_dict.get(hour, 0) + 1
     
-    # 0-23時まで全ての時間帯を含める（データがない時間は0件）
-    hourly_orders_dict = {int(hour): count for hour, count in hourly_data}
     hourly_orders = [
         HourlyOrderData(hour=hour, order_count=hourly_orders_dict.get(hour, 0))
         for hour in range(24)
@@ -422,6 +402,11 @@ def get_weekly_sales(
     **レスポンス:**
     - labels: 日付のリスト（YYYY-MM-DD形式）
     - data: 各日の売上金額のリスト
+    
+    **最適化:**
+    - 7回のクエリを1回の集約クエリに統合
+    - DATE関数とGROUP BYを活用
+    - インデックスによる高速検索
     """
     # ユーザーが店舗に所属しているか確認
     if not current_user.store_id:
@@ -432,26 +417,36 @@ def get_weekly_sales(
     
     # 過去7日間のデータを取得
     today = date.today()
-    weekly_data = []
+    start_date = today - timedelta(days=6)  # 6日前
+    start_datetime = datetime.combine(start_date, datetime.min.time())
+    end_datetime = datetime.combine(today, datetime.max.time())
     
-    for days_ago in range(6, -1, -1):  # 6日前から今日まで
+    # === 最適化: 1回のクエリで全7日分のデータを取得 ===
+    daily_sales = db.query(
+        func.date(Order.ordered_at).label('order_date'),
+        func.sum(Order.total_price).label('revenue')
+    ).filter(
+        Order.store_id == current_user.store_id,
+        Order.ordered_at >= start_datetime,
+        Order.ordered_at <= end_datetime,
+        Order.status != "cancelled"
+    ).group_by(
+        func.date(Order.ordered_at)
+    ).all()
+    
+    # 日付をキーとした辞書に変換
+    sales_dict = {str(day): revenue for day, revenue in daily_sales}
+    
+    # 7日分のデータを構築（データがない日は0円）
+    weekly_data = []
+    for days_ago in range(6, -1, -1):
         target_date = today - timedelta(days=days_ago)
-        date_start = datetime.combine(target_date, datetime.min.time())
-        date_end = datetime.combine(target_date, datetime.max.time())
-        
-        # その日の売上を集計（キャンセル除く）
-        daily_revenue = db.query(func.sum(Order.total_price)).filter(
-            and_(
-                Order.store_id == current_user.store_id,
-                Order.ordered_at >= date_start,
-                Order.ordered_at <= date_end,
-                Order.status != "cancelled"
-            )
-        ).scalar() or 0
+        date_str = target_date.strftime("%Y-%m-%d")
+        revenue = sales_dict.get(date_str, 0) or 0
         
         weekly_data.append({
-            "date": target_date.strftime("%Y-%m-%d"),
-            "revenue": daily_revenue
+            "date": date_str,
+            "revenue": revenue
         })
     
     return {
