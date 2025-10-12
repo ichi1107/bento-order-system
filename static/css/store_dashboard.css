@@ -12,6 +12,13 @@
     border-bottom: 2px solid #e0e0e0;
 }
 
+.page-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
 .page-header h2 {
     font-size: 1.8rem;
     color: #333;
@@ -23,6 +30,44 @@
     color: #666;
     margin: 0;
     font-size: 0.95rem;
+}
+
+/* ===== 最終更新時刻 ===== */
+.last-updated {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+    border-radius: 8px;
+    border: 1px solid #d1d9e6;
+}
+
+.last-updated-label {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.last-updated-time {
+    font-size: 1rem;
+    color: #333;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+@media (max-width: 768px) {
+    .page-header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .last-updated {
+        align-items: flex-start;
+    }
 }
 
 /* ===== 統計カードグリッド ===== */
