@@ -1,0 +1,568 @@
+/**
+ * 店舗ダッシュボード専用CSS
+ * 
+ * 統計カード、グラフエリア、アクションボタンなどの
+ * ダッシュボード固有のUIコンポーネントのスタイルを定義
+ */
+
+/* ===== ページヘッダー ===== */
+.page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.page-header h2 {
+    font-size: 1.8rem;
+    color: #333;
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+}
+
+.page-header p {
+    color: #666;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* ===== 統計カードグリッド ===== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+/* ===== 統計カード ===== */
+.stat-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: 1px solid #f0f0f0;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card:hover::before {
+    opacity: 1;
+}
+
+/* ===== 統計カードアイコン ===== */
+.stat-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* ===== 統計カードコンテンツ ===== */
+.stat-content {
+    flex: 1;
+}
+
+.stat-content h3 {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0 0 0.5rem 0;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ===== 統計数値 ===== */
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0.5rem 0;
+    line-height: 1.2;
+}
+
+.stat-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0.5rem 0;
+    line-height: 1.3;
+}
+
+/* ===== 変化率表示 ===== */
+.stat-change {
+    font-size: 0.85rem;
+    margin: 0.5rem 0 0 0;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.stat-change.positive {
+    color: #10b981;
+}
+
+.stat-change.positive::before {
+    content: '↑';
+    font-size: 1rem;
+}
+
+.stat-change.negative {
+    color: #ef4444;
+}
+
+.stat-change.negative::before {
+    content: '↓';
+    font-size: 1rem;
+}
+
+.stat-change:not(.positive):not(.negative) {
+    color: #6b7280;
+}
+
+/* ===== ダッシュボードコンテンツエリア ===== */
+.dashboard-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+}
+
+.dashboard-section {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+}
+
+.dashboard-section h3 {
+    font-size: 1.2rem;
+    color: #333;
+    margin: 0 0 1.5rem 0;
+    font-weight: 600;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+/* ===== 最近の注文リスト ===== */
+.recent-orders {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.order-summary {
+    display: grid;
+    grid-template-columns: 60px 1fr 2fr auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+    transition: all 0.2s ease;
+}
+
+.order-summary:hover {
+    background: #f3f4f6;
+    transform: translateX(4px);
+}
+
+.order-time {
+    font-weight: 600;
+    color: #667eea;
+    font-size: 0.9rem;
+}
+
+.order-customer {
+    font-weight: 500;
+    color: #333;
+}
+
+.order-items {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.order-status {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.order-status.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.order-status.status-confirmed {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.order-status.status-preparing {
+    background: #fce7f3;
+    color: #9f1239;
+}
+
+.order-status.status-ready {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.order-status.status-completed {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+/* ===== グラフプレースホルダー ===== */
+.chart-placeholder {
+    min-height: 300px;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+}
+
+.chart-placeholder p {
+    font-size: 1.5rem;
+    color: #6b7280;
+    margin: 0.5rem 0;
+}
+
+.chart-note {
+    font-size: 0.9rem !important;
+    color: #9ca3af !important;
+    font-style: italic;
+}
+
+/* ===== クイックアクションエリア ===== */
+.quick-actions {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+    margin-bottom: 2rem;
+}
+
+.quick-actions h3 {
+    font-size: 1.2rem;
+    color: #333;
+    margin: 0 0 1.5rem 0;
+    font-weight: 600;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    flex: 1;
+    min-width: 180px;
+    padding: 1rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.action-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.action-btn.secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+}
+
+.action-btn.secondary:hover {
+    background: #e5e7eb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn:active {
+    transform: translateY(0);
+}
+
+/* ===== レスポンシブデザイン ===== */
+
+/* タブレット横向き (1200px以下) */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.2rem;
+    }
+
+    .dashboard-content {
+        gap: 1.5rem;
+    }
+}
+
+/* タブレット縦向き (992px以下) */
+@media (max-width: 992px) {
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .stat-card {
+        padding: 1.2rem;
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+    }
+
+    .stat-number {
+        font-size: 1.6rem;
+    }
+
+    .dashboard-content {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-btn {
+        min-width: 100%;
+    }
+}
+
+/* モバイル横向き (768px以下) */
+@media (max-width: 768px) {
+    .page-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .page-header p {
+        font-size: 0.85rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .stat-content h3 {
+        font-size: 0.8rem;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+    }
+
+    .stat-text {
+        font-size: 1rem;
+    }
+
+    .dashboard-section {
+        padding: 1.2rem;
+    }
+
+    .dashboard-section h3 {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    .order-summary {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding: 0.8rem;
+    }
+
+    .order-time {
+        font-size: 0.85rem;
+    }
+
+    .order-customer,
+    .order-items {
+        font-size: 0.85rem;
+    }
+
+    .order-status {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.75rem;
+        width: fit-content;
+    }
+
+    .chart-placeholder {
+        min-height: 200px;
+        padding: 1.5rem;
+    }
+
+    .chart-placeholder p {
+        font-size: 1.2rem;
+    }
+
+    .quick-actions {
+        padding: 1.2rem;
+    }
+
+    .quick-actions h3 {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    .action-btn {
+        padding: 0.8rem 1.2rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* モバイル縦向き (576px以下) */
+@media (max-width: 576px) {
+    .page-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .stat-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 1.2rem;
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-content {
+        width: 100%;
+    }
+
+    .stat-number {
+        font-size: 1.8rem;
+    }
+
+    .dashboard-section {
+        padding: 1rem;
+    }
+
+    .order-summary {
+        padding: 0.75rem;
+        border-left-width: 2px;
+    }
+
+    .chart-placeholder {
+        min-height: 180px;
+        padding: 1rem;
+    }
+
+    .chart-placeholder p {
+        font-size: 1rem;
+    }
+
+    .chart-note {
+        font-size: 0.8rem !important;
+    }
+}
+
+/* ===== ダークモード対応（将来の拡張用） ===== */
+@media (prefers-color-scheme: dark) {
+    /* ダークモードのスタイルは将来実装予定 */
+}
+
+/* ===== アニメーション ===== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-card,
+.dashboard-section,
+.quick-actions {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* 各カードに遅延を適用して順番にアニメーション */
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* ===== プリント用スタイル ===== */
+@media print {
+    .action-buttons,
+    .quick-actions {
+        display: none;
+    }
+
+    .stat-card,
+    .dashboard-section {
+        box-shadow: none;
+        border: 1px solid #e0e0e0;
+    }
+
+    .stat-card:hover {
+        transform: none;
+    }
+}
