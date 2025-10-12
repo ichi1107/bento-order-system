@@ -102,6 +102,11 @@ class Menu(Base):
 class Order(Base):
     """注文テーブル"""
     __tablename__ = "orders"
+    __table_args__ = (
+        # 複合インデックス: パフォーマンス最適化
+        # ダッシュボードAPIで頻繁に使用されるクエリパターンに対応
+        {'extend_existing': True}
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -109,10 +114,10 @@ class Order(Base):
     store_id = Column(Integer, ForeignKey("stores.id", ondelete="CASCADE"), nullable=False, index=True)
     quantity = Column(Integer, nullable=False)
     total_price = Column(Integer, nullable=False)
-    status = Column(String(50), default="pending")  # pending, confirmed, preparing, ready, completed, cancelled
+    status = Column(String(50), default="pending", index=True)  # インデックス追加
     delivery_time = Column(Time)
     notes = Column(Text)
-    ordered_at = Column(DateTime(timezone=True), server_default=func.now())
+    ordered_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)  # インデックス追加
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # リレーションシップ

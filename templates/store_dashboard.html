@@ -4,10 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>店舗ダッシュボード - 弁当注文システム</title>
+    
+    <!-- パフォーマンス最適化: DNS Prefetch & Preconnect -->
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    
+    <!-- Critical CSS: インライン化推奨 -->
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/store_dashboard.css">
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Chart.js CDN: 遅延読み込み -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
     <div class="container">
@@ -135,7 +142,8 @@
         </footer>
     </div>
 
-    <script src="/static/js/common.js"></script>
-    <script src="/static/js/store_dashboard.js"></script>
+    <!-- パフォーマンス最適化: JavaScript遅延読み込み -->
+    <script src="/static/js/common.js" defer></script>
+    <script src="/static/js/store_dashboard.js" defer></script>
 </body>
 </html>
