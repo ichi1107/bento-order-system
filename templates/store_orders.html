@@ -26,9 +26,8 @@
                     <div class="header-stats">
                         <div class="header-badges">
                             <span class="badge badge-info">全: <span id="totalOrdersCount">0</span>件</span>
-                            <span class="badge badge-warning">未確認: <span id="pendingOrdersCount">0</span>件</span>
-                            <span class="badge badge-purple">準備中: <span id="preparingCount">0</span>件</span>
-                            <span class="badge badge-success">受取可: <span id="readyCount">0</span>件</span>
+                            <span class="badge badge-warning">注文受付: <span id="pendingOrdersCount">0</span>件</span>
+                            <span class="badge badge-success">準備完了: <span id="readyCount">0</span>件</span>
                         </div>
                         <div class="header-actions">
                             <button class="btn btn-secondary" id="refreshBtn" title="最新の状態に更新">
@@ -61,29 +60,21 @@
                     </div>
                 </div>
 
-                <!-- ステータスフィルタ（複数選択） -->
+                <!-- ステータスフィルタ（4ステータス対応） -->
                 <div class="filter-group filter-status">
                     <label>📋 注文ステータス</label>
                     <div class="checkbox-group">
                         <label class="checkbox-label">
                             <input type="checkbox" class="status-checkbox" value="pending" checked>
-                            <span>未確認</span>
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="status-checkbox" value="confirmed" checked>
-                            <span>確認済み</span>
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="status-checkbox" value="preparing" checked>
-                            <span>準備中</span>
+                            <span>注文受付</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" class="status-checkbox" value="ready" checked>
-                            <span>受取可能</span>
+                            <span>準備完了</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" class="status-checkbox" value="completed">
-                            <span>完了</span>
+                            <span>受取完了</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" class="status-checkbox" value="cancelled">

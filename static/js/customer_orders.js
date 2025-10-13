@@ -195,11 +195,9 @@ class CustomerOrdersPage {
 
     getStatusText(status) {
         const statusMap = {
-            'pending': '注文中',
-            'confirmed': '確認済み',
-            'preparing': '準備中',
-            'ready': '受取準備完了',
-            'completed': '完了',
+            'pending': '注文受付',
+            'ready': '準備完了',
+            'completed': '受取完了',
             'cancelled': 'キャンセル'
         };
         return statusMap[status] || status;

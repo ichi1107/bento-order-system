@@ -137,22 +137,11 @@
     letter-spacing: 0.5px;
 }
 
+/* ===== 4ステータスシステム用バッジ ===== */
 .badge-pending {
     background-color: #fff3cd;
     color: #856404;
     border: 1px solid #ffeaa7;
-}
-
-.badge-confirmed {
-    background-color: #cfe2ff;
-    color: #084298;
-    border: 1px solid #9ec5fe;
-}
-
-.badge-preparing {
-    background-color: #e0cffc;
-    color: #6f42c1;
-    border: 1px solid #c29ffa;
 }
 
 .badge-ready {
