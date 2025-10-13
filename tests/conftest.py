@@ -118,7 +118,7 @@ def customer_user_empty(db_session):
 
 
 @pytest.fixture
-def store_user(db_session, roles):
+def store_user(db_session, roles, store_a):
     """
     テスト用店舗ユーザー (owner権限付き)
     既存テストとの互換性のため、ownerロールを自動割当
@@ -129,7 +129,8 @@ def store_user(db_session, roles):
         full_name="テスト店舗",
         hashed_password=get_password_hash("password123"),
         role="store",
-        is_active=True
+        is_active=True,
+        store_id=store_a.id
     )
     db_session.add(user)
     db_session.commit()
@@ -244,7 +245,7 @@ def staff_user(db_session, roles):
 
 
 @pytest.fixture
-def test_menu(db_session):
+def test_menu(db_session, store_a):
     """
     テスト用メニュー
     """
@@ -253,7 +254,8 @@ def test_menu(db_session):
         price=800,
         description="テスト用の弁当です",
         image_url="https://example.com/test.jpg",
-        is_available=True
+        is_available=True,
+        store_id=store_a.id
     )
     db_session.add(menu)
     db_session.commit()
@@ -262,7 +264,7 @@ def test_menu(db_session):
 
 
 @pytest.fixture
-def test_menu_2(db_session):
+def test_menu_2(db_session, store_a):
     """
     テスト用メニュー2
     """
@@ -271,7 +273,8 @@ def test_menu_2(db_session):
         price=900,
         description="テスト用の弁当2です",
         image_url="https://example.com/test2.jpg",
-        is_available=True
+        is_available=True,
+        store_id=store_a.id
     )
     db_session.add(menu)
     db_session.commit()
@@ -298,7 +301,7 @@ def test_menu_unavailable(db_session):
 
 
 @pytest.fixture
-def orders_for_customer_a(db_session, customer_user_a, test_menu, test_menu_2):
+def orders_for_customer_a(db_session, customer_user_a, test_menu, test_menu_2, store_a):
     """
     顧客Aの注文履歴を作成
     """
@@ -309,6 +312,7 @@ def orders_for_customer_a(db_session, customer_user_a, test_menu, test_menu_2):
     order1 = Order(
         user_id=customer_user_a.id,
         menu_id=test_menu.id,
+        store_id=store_a.id,
         quantity=2,
         total_price=test_menu.price * 2,
         status="completed",
@@ -322,6 +326,7 @@ def orders_for_customer_a(db_session, customer_user_a, test_menu, test_menu_2):
     order2 = Order(
         user_id=customer_user_a.id,
         menu_id=test_menu_2.id,
+        store_id=store_a.id,
         quantity=1,
         total_price=test_menu_2.price * 1,
         status="confirmed",
@@ -335,6 +340,7 @@ def orders_for_customer_a(db_session, customer_user_a, test_menu, test_menu_2):
     order3 = Order(
         user_id=customer_user_a.id,
         menu_id=test_menu.id,
+        store_id=store_a.id,
         quantity=3,
         total_price=test_menu.price * 3,
         status="pending",
@@ -352,7 +358,7 @@ def orders_for_customer_a(db_session, customer_user_a, test_menu, test_menu_2):
 
 
 @pytest.fixture
-def orders_for_customer_b(db_session, customer_user_b, test_menu):
+def orders_for_customer_b(db_session, customer_user_b, test_menu, store_a):
     """
     顧客Bの注文履歴を作成
     """
@@ -362,6 +368,7 @@ def orders_for_customer_b(db_session, customer_user_b, test_menu):
     order1 = Order(
         user_id=customer_user_b.id,
         menu_id=test_menu.id,
+        store_id=store_a.id,
         quantity=1,
         total_price=test_menu.price * 1,
         status="pending",
@@ -800,3 +807,30 @@ def order_store_b(db_session, customer_user_b, menu_store_b, store_b):
     db_session.commit()
     db_session.refresh(order)
     return order
+
+
+# ===== 追加フィクスチャ (test/76用) =====
+# これらは既存のstore_aベースのフィクスチャのエイリアス
+
+@pytest.fixture
+def sample_store(store_a):
+    """
+    テスト用の汎用店舗 (store_aのエイリアス)
+    """
+    return store_a
+
+
+@pytest.fixture
+def sample_menu(test_menu):
+    """
+    テスト用の汎用メニュー (test_menuのエイリアス)
+    """
+    return test_menu
+
+
+@pytest.fixture
+def sample_customer(customer_user_a):
+    """
+    テスト用の汎用顧客 (customer_user_aのエイリアス)
+    """
+    return customer_user_a

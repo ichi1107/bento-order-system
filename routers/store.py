@@ -461,7 +461,7 @@ def get_weekly_sales(
 
 @router.get("/orders", response_model=OrderListResponse, summary="全注文一覧取得")
 def get_all_orders(
-    status: Optional[str] = Query(None, description="ステータスでフィルタ（カンマ区切りで複数指定可）"),
+    order_status: Optional[str] = Query(None, alias="status", description="ステータスでフィルタ（カンマ区切りで複数指定可）"),
     start_date: Optional[str] = Query(None, description="開始日 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="終了日 (YYYY-MM-DD)"),
     q: Optional[str] = Query(None, description="検索キーワード（顧客名、メニュー名）"),
@@ -496,8 +496,8 @@ def get_all_orders(
     needs_menu_join = False
     
     # ステータスフィルタ（複数選択対応）
-    if status:
-        status_list = [s.strip() for s in status.split(',')]
+    if order_status:
+        status_list = [s.strip() for s in order_status.split(',')]
         query = query.filter(Order.status.in_(status_list))
     
     # 日付フィルタ
@@ -940,36 +940,3 @@ def get_sales_report(
         "total_sales": total_sales,
         "total_orders": total_orders
     }
-
-# ===== 店舗プロフィール管理 =====
-
-@router.get('/profile', summary='店舗プロフィール取得')
-def get_store_profile(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    from models import Store
-    store = db.query(Store).first()
-    if not store:
-        raise HTTPException(status_code=404, detail='Store not found')
-    return store
-
-@router.put('/profile', summary='店舗プロフィール更新')
-def update_store_profile(
-    store_update: dict,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(['owner']))
-):
-    from models import Store
-    store = db.query(Store).first()
-    if not store:
-        raise HTTPException(status_code=404, detail='Store not found')
-    
-    allowed_fields = ['name', 'email', 'phone_number', 'address', 'opening_time', 'closing_time', 'description', 'is_active']
-    for field, value in store_update.items():
-        if field in allowed_fields and value is not None:
-            setattr(store, field, value)
-    
-    db.commit()
-    db.refresh(store)
-    return store
