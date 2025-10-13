@@ -1198,3 +1198,157 @@
 .mt-2 {
     margin-top: 1rem;
 }
+
+/* ===== 通知許可バナー ===== */
+
+.notification-permission-banner {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 600px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.notification-permission-banner.show {
+    opacity: 1;
+}
+
+.permission-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.banner-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.banner-text {
+    flex: 1;
+}
+
+.banner-text strong {
+    display: block;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.banner-text p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.95;
+}
+
+.banner-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.banner-actions .btn {
+    white-space: nowrap;
+}
+
+/* ===== 通知バッジ ===== */
+
+.notification-link {
+    position: relative;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    background: #dc3545;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.5);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.9;
+    }
+}
+
+/* ===== サウンドトグルボタン ===== */
+
+.sound-toggle {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.sound-toggle.sound-enabled {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+}
+
+.sound-toggle.sound-enabled:hover {
+    background: linear-gradient(135deg, #218838 0%, #1aa179 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.sound-toggle.sound-disabled {
+    background: #6c757d;
+    color: white;
+    border: none;
+}
+
+.sound-toggle.sound-disabled:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+/* ===== レスポンシブ対応 (通知関連) ===== */
+
+@media (max-width: 768px) {
+    .notification-permission-banner {
+        top: 60px;
+        width: 95%;
+        padding: 1rem;
+    }
+
+    .permission-banner-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .banner-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .banner-actions .btn {
+        width: 100%;
+    }
+
+    .notification-badge {
+        top: -3px;
+        right: -5px;
+        font-size: 0.7rem;
+        padding: 1px 4px;
+    }
+}

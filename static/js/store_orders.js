@@ -20,6 +20,7 @@ class OrderManager {
         this.elements = {};
         this.searchTimeout = null;
         this.dateTimeout = null; // 日付フィルタ用のデバウンスタイマー
+        this.notificationManager = window.notificationManager; // 通知マネージャー
         this.init();
     }
 
@@ -80,6 +81,10 @@ class OrderManager {
         this.elements.toastContainer = document.getElementById("toastContainer");
         this.elements.refreshBtn = document.getElementById("refreshBtn");
         this.elements.autoRefreshStatus = document.getElementById("autoRefreshText");
+        
+        // 通知関連の要素
+        this.elements.soundToggleBtn = document.getElementById("soundToggleBtn");
+        this.elements.notificationBadge = document.getElementById("notificationBadge");
     }
 
     attachEventListeners() {
@@ -151,6 +156,22 @@ class OrderManager {
         this.elements.refreshBtn.addEventListener("click", () => {
             this.loadOrders();
         });
+
+        // サウンドトグルボタン
+        if (this.elements.soundToggleBtn) {
+            this.updateSoundButtonUI();
+            this.elements.soundToggleBtn.addEventListener("click", () => {
+                const isEnabled = this.notificationManager.toggleSound();
+                this.updateSoundButtonUI();
+                
+                // フィードバックトースト
+                this.showToast(
+                    "info",
+                    "通知音設定",
+                    isEnabled ? "🔔 通知音が有効になりました" : "🔕 通知音が無効になりました"
+                );
+            });
+        }
 
         // モーダル
         const closeModal = () => {
@@ -375,7 +396,15 @@ class OrderManager {
             
             // データ変換: APIレスポンスをフロントエンド用に整形
             this.orders = this.orders.map(order => this.normalizeOrder(order));
-            
+
+            // 新規注文の検出と通知
+            if (this.notificationManager) {
+                const newOrders = this.notificationManager.detectNewOrders(this.orders);
+                newOrders.forEach(order => {
+                    this.notificationManager.notifyNewOrder(order);
+                });
+            }
+
             this.displayOrders();
             this.updateCounts();
             this.updateSearchResultsInfo(data.total || this.orders.length);
@@ -604,6 +633,13 @@ class OrderManager {
             // UI更新
             this.displayOrders();
             this.updateCounts();
+
+            // pending から他のステータスに変更した場合、未確認カウントを減らす
+            if (currentStatus === 'pending' && newStatus !== 'pending') {
+                if (this.notificationManager) {
+                    this.notificationManager.decrementUnconfirmedCount();
+                }
+            }
             
             // 成功メッセージ
             const statusLabels = {
@@ -776,6 +812,21 @@ class OrderManager {
         const div = document.createElement("div");
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * サウンドボタンのUI更新
+     */
+    updateSoundButtonUI() {
+        if (!this.elements.soundToggleBtn || !this.notificationManager) return;
+        
+        const isEnabled = this.notificationManager.isSoundEnabled();
+        const icon = isEnabled ? '🔔' : '🔕';
+        const text = isEnabled ? '通知音: ON' : '通知音: OFF';
+        
+        this.elements.soundToggleBtn.innerHTML = `${icon} ${text}`;
+        this.elements.soundToggleBtn.classList.toggle('sound-enabled', isEnabled);
+        this.elements.soundToggleBtn.classList.toggle('sound-disabled', !isEnabled);
     }
 }
 

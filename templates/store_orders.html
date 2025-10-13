@@ -30,6 +30,9 @@
                             <span class="badge badge-success">準備完了: <span id="readyCount">0</span>件</span>
                         </div>
                         <div class="header-actions">
+                            <button class="btn btn-secondary sound-toggle" id="soundToggleBtn" title="通知音のON/OFF">
+                                🔔 通知音: ON
+                            </button>
                             <button class="btn btn-secondary" id="refreshBtn" title="最新の状態に更新">
                                 🔄 更新
                             </button>
@@ -186,6 +189,7 @@
     </div>
 
     <script src="/static/js/common.js" defer></script>
+    <script src="/static/js/notification-manager.js"></script>
     <script src="/static/js/store_orders.js" defer></script>
 </body>
 </html>
