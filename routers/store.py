@@ -248,19 +248,25 @@ def get_dashboard(
     current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
-    本日の注文状況サマリーを取得（最適化版）
+    本日の注文状況サマリーを取得（最適化版・簡素化ステータス対応）
     
     **必要な権限:** owner, manager, staff
     
     **レスポンス:**
     - total_orders: 本日の総注文数
-    - 各ステータスの注文数（pending, confirmed, preparing, ready, completed, cancelled）
+    - 各ステータスの注文数（pending, ready, completed, cancelled）
     - total_sales: 本日の総売上（キャンセル除く）
     - today_revenue: 本日の総売上（total_salesと同値）
     - average_order_value: 平均注文単価
     - yesterday_comparison: 前日との比較データ（注文数・売上の増減）
     - popular_menus: 本日の人気メニュートップ3
     - hourly_orders: 時間帯別の注文数（0-23時）
+    
+    **ステータス定義:**
+    - pending: 注文受付（確認・在庫確認・決済処理）
+    - ready: 準備完了（弁当完成、顧客通知）
+    - completed: 受取完了（顧客が受取済み）
+    - cancelled: キャンセル（注文取消）
     
     **最適化:**
     - 複数クエリを1つのCTEクエリに統合してDB往復を削減
@@ -292,11 +298,9 @@ def get_dashboard(
         Order.ordered_at <= today_end
     ).all()
     
-    # Pythonメモリ上でステータス別集計（DBへの追加クエリなし）
+    # Pythonメモリ上でステータス別集計（簡素化版: 4ステータス）
     total_orders = len(today_orders)
     pending_orders = sum(1 for o in today_orders if o.status == "pending")
-    confirmed_orders = sum(1 for o in today_orders if o.status == "confirmed")
-    preparing_orders = sum(1 for o in today_orders if o.status == "preparing")
     ready_orders = sum(1 for o in today_orders if o.status == "ready")
     completed_orders = sum(1 for o in today_orders if o.status == "completed")
     cancelled_orders = sum(1 for o in today_orders if o.status == "cancelled")
@@ -375,8 +379,6 @@ def get_dashboard(
     return {
         "total_orders": total_orders,
         "pending_orders": pending_orders,
-        "confirmed_orders": confirmed_orders,
-        "preparing_orders": preparing_orders,
         "ready_orders": ready_orders,
         "completed_orders": completed_orders,
         "cancelled_orders": cancelled_orders,
@@ -574,15 +576,19 @@ def update_order_status(
     current_user: User = Depends(require_role(['owner', 'manager', 'staff']))
 ):
     """
-    注文のステータスを更新（自店舗の注文のみ）
+    注文のステータスを更新（自店舗の注文のみ・簡素化ステータス対応）
     
     可能なステータス:
-    - pending: 注文受付
-    - confirmed: 注文確認済み
-    - preparing: 調理中
-    - ready: 受取準備完了
-    - completed: 受取完了
-    - cancelled: キャンセル
+    - pending: 注文受付（確認・在庫確認・決済処理）
+    - ready: 準備完了（弁当完成、顧客通知）
+    - completed: 受取完了（顧客が受取済み）
+    - cancelled: キャンセル（注文取消）
+    
+    **ステータス遷移ルール:**
+    - pending → ready または cancelled
+    - ready → completed
+    - completed → 変更不可
+    - cancelled → 変更不可
     
     **必要な権限:** owner, manager, staff
     """
@@ -605,7 +611,19 @@ def update_order_status(
             detail="Order not found"
         )
     
-    order.status = status_update.status
+    # ステータス遷移のバリデーション（簡素化ステータス対応）
+    from schemas import OrderStatus
+    
+    allowed_transitions = OrderStatus.get_allowed_transitions(order.status)
+    new_status = status_update.status.value if hasattr(status_update.status, 'value') else status_update.status
+    
+    if new_status not in allowed_transitions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status transition from '{order.status}' to '{new_status}'. Allowed: {allowed_transitions}"
+        )
+    
+    order.status = new_status
     db.commit()
     db.refresh(order)
     
