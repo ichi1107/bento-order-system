@@ -70,7 +70,6 @@ class OrderManager {
         this.elements.searchResultsInfo = document.getElementById("searchResultsInfo");
         this.elements.totalCount = document.getElementById("totalOrdersCount");
         this.elements.pendingCount = document.getElementById("pendingOrdersCount");
-        this.elements.preparingCount = document.getElementById("preparingCount");
         this.elements.readyCount = document.getElementById("readyCount");
         this.elements.loadingElement = document.getElementById("loadingContainer");
         this.elements.errorElement = document.getElementById("errorContainer");
@@ -182,7 +181,7 @@ class OrderManager {
             });
         } else {
             // デフォルト: 未完了のステータスのみ
-            this.currentFilters.status = ['pending', 'confirmed', 'preparing', 'ready'];
+            this.currentFilters.status = ['pending', 'ready'];
             this.elements.statusCheckboxes.forEach(cb => {
                 cb.checked = this.currentFilters.status.includes(cb.value);
             });
@@ -261,7 +260,7 @@ class OrderManager {
     resetFilters() {
         // デフォルト値に戻す
         this.elements.statusCheckboxes.forEach(cb => {
-            cb.checked = ['pending', 'confirmed', 'preparing', 'ready'].includes(cb.value);
+            cb.checked = ['pending', 'ready'].includes(cb.value);
         });
         this.elements.startDate.value = '';
         this.elements.endDate.value = '';
@@ -270,7 +269,7 @@ class OrderManager {
         this.elements.clearSearchBtn.style.display = 'none';
         
         this.currentFilters = {
-            status: ['pending', 'confirmed', 'preparing', 'ready'],
+            status: ['pending', 'ready'],
             startDate: '',
             endDate: '',
             search: '',
@@ -457,13 +456,11 @@ class OrderManager {
             const dateRange = `${this.currentFilters.startDate || '開始日未指定'} 〜 ${this.currentFilters.endDate || '終了日未指定'}`;
             filters.push(`期間: ${dateRange}`);
         }
-        if (this.currentFilters.status.length > 0 && this.currentFilters.status.length < 6) {
+        if (this.currentFilters.status.length > 0 && this.currentFilters.status.length < 4) {
             const statusNames = {
-                'pending': '未確認',
-                'confirmed': '確認済み',
-                'preparing': '準備中',
-                'ready': '受取可能',
-                'completed': '完了',
+                'pending': '注文受付',
+                'ready': '準備完了',
+                'completed': '受取完了',
                 'cancelled': 'キャンセル'
             };
             const statusLabels = this.currentFilters.status.map(s => statusNames[s]).join(', ');
@@ -501,11 +498,9 @@ class OrderManager {
             <div class="order-card-footer">
                 <div class="status-update">
                     <select class="status-select" data-order-id="${order.id}">
-                        <option value="pending" ${order.status === "pending" ? "selected" : ""}>未確認</option>
-                        <option value="confirmed" ${order.status === "confirmed" ? "selected" : ""}>確認済み</option>
-                        <option value="preparing" ${order.status === "preparing" ? "selected" : ""}>準備中</option>
-                        <option value="ready" ${order.status === "ready" ? "selected" : ""}>受取可能</option>
-                        <option value="completed" ${order.status === "completed" ? "selected" : ""}>完了</option>
+                        <option value="pending" ${order.status === "pending" ? "selected" : ""}>注文受付</option>
+                        <option value="ready" ${order.status === "ready" ? "selected" : ""}>準備完了</option>
+                        <option value="completed" ${order.status === "completed" ? "selected" : ""}>受取完了</option>
                         <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>キャンセル</option>
                     </select>
                     <button class="btn btn-primary btn-sm update-status-btn" data-order-id="${order.id}">ステータス更新</button>
@@ -594,7 +589,6 @@ class OrderManager {
     updateCounts() {
         this.elements.totalCount.textContent = this.orders.length;
         this.elements.pendingCount.textContent = this.orders.filter(o => o.status === "pending").length;
-        this.elements.preparingCount.textContent = this.orders.filter(o => o.status === "preparing").length;
         this.elements.readyCount.textContent = this.orders.filter(o => o.status === "ready").length;
     }
 

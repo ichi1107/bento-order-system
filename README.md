@@ -118,12 +118,16 @@
 
 **ダッシュボード（全ロール）**
 - 本日の注文件数・売上
-- 注文ステータス別の件数
+- 注文ステータス別の件数（注文受付・準備完了）
 - リアルタイム注文状況
 
 **注文管理（全ロール）**
-- 注文一覧の閲覧
-- 注文ステータスの更新（受付中→調理中→配達中→完了）
+- 注文一覧の閲覧・フィルタリング・検索
+- 注文ステータスの更新（注文受付 → 準備完了 → 受取完了）
+- ステータス遷移ルール:
+  - `pending`（注文受付）→ `ready`（準備完了）または `cancelled`（キャンセル）
+  - `ready`（準備完了）→ `completed`（受取完了）
+  - `completed`/`cancelled` → 変更不可（最終状態）
 
 **メニュー管理（Owner / Manager）**
 - メニューの作成・編集
@@ -585,13 +589,29 @@ PUT  /api/customer/orders/{id}/cancel # 注文キャンセル
 #### 店舗向け
 ```
 GET  /api/store/dashboard          # ダッシュボード情報
-GET  /api/store/orders             # 全注文一覧
-PUT  /api/store/orders/{id}/status # 注文ステータス更新
+GET  /api/store/orders             # 全注文一覧（フィルタリング対応）
+PUT  /api/store/orders/{id}/status # 注文ステータス更新（遷移バリデーション付き）
 POST /api/store/menus              # メニュー作成
 PUT  /api/store/menus/{id}         # メニュー更新
 DELETE /api/store/menus/{id}       # メニュー削除
 GET  /api/store/reports/sales      # 売上レポート
 ```
+
+**注文ステータス仕様 (4ステータスシステム):**
+
+| ステータス | 値 | 説明 | 次の状態 |
+|-----------|-----|------|----------|
+| 注文受付 | `pending` | 新規注文を受付けた状態 | `ready`, `cancelled` |
+| 準備完了 | `ready` | 商品の準備が完了し受取可能 | `completed` |
+| 受取完了 | `completed` | お客様が商品を受け取った（最終状態） | - |
+| キャンセル | `cancelled` | 注文がキャンセルされた（最終状態） | - |
+
+**ステータス遷移ルール:**
+- ✅ `pending` → `ready`: 商品準備完了時
+- ✅ `pending` → `cancelled`: 注文キャンセル時
+- ✅ `ready` → `completed`: お客様受取時
+- ❌ `completed` → 他の状態: 変更不可
+- ❌ `cancelled` → 他の状態: 変更不可
 
 **店舗エンドポイントの権限マトリックス:**
 
@@ -600,8 +620,8 @@ GET  /api/store/reports/sales      # 売上レポート
 | **ダッシュボード** |
 | GET /dashboard | ✅ | ✅ | ✅ | 本日の注文状況サマリー |
 | **注文管理** |
-| GET /orders | ✅ | ✅ | ✅ | 全注文一覧取得 |
-| PUT /orders/{id}/status | ✅ | ✅ | ✅ | 注文ステータス更新 |
+| GET /orders | ✅ | ✅ | ✅ | 全注文一覧取得（フィルタ・検索対応） |
+| PUT /orders/{id}/status | ✅ | ✅ | ✅ | 注文ステータス更新（遷移検証付き） |
 | **メニュー管理** |
 | GET /menus | ✅ | ✅ | ✅ | メニュー一覧取得 |
 | POST /menus | ✅ | ✅ | ❌ | メニュー作成 |
@@ -624,8 +644,8 @@ GET  /api/store/reports/sales      # 売上レポート
 | **ダッシュボード** |
 | GET /dashboard | ✅ | ✅ | ✅ | 本日の注文状況を確認 |
 | **注文管理** |
-| GET /orders | ✅ | ✅ | ✅ | 全注文一覧を閲覧 |
-| PUT /orders/{id}/status | ✅ | ✅ | ✅ | 注文ステータスを更新 |
+| GET /orders | ✅ | ✅ | ✅ | 全注文一覧を閲覧（フィルタ・ソート対応） |
+| PUT /orders/{id}/status | ✅ | ✅ | ✅ | 注文ステータスを更新（遷移検証付き） |
 | **メニュー管理** |
 | GET /menus | ✅ | ✅ | ✅ | メニュー一覧を閲覧 |
 | POST /menus | ✅ | ✅ | ❌ | メニューを作成 |
@@ -635,7 +655,7 @@ GET  /api/store/reports/sales      # 売上レポート
 | GET /reports/sales | ✅ | ✅ | ❌ | 売上レポートを閲覧 |
 
 **権限による制限:**
-- **スタッフ**: 注文確認・ステータス更新、メニュー閲覧のみ可能
+- **スタッフ**: 注文確認・ステータス更新（4ステータス）、メニュー閲覧のみ可能
 - **マネージャー**: スタッフ権限 + メニュー作成・更新、売上レポート閲覧
 - **オーナー**: 全権限（メニュー削除を含む）
 
