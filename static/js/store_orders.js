@@ -480,6 +480,36 @@ class OrderManager {
             const pickupTime = new Date(order.pickup_time);
             pickupTimeHtml = `<div class="order-info-item"><i class="icon">🕐</i><span>受取時間: ${this.formatTime(pickupTime)}</span></div>`;
         }
+
+        // ステータス遷移ルールの定義（バックエンドと一致）
+        const allowedTransitions = {
+            'pending': ['ready', 'cancelled'],
+            'ready': ['completed'],
+            'completed': [],
+            'cancelled': []
+        };
+
+        const currentAllowed = allowedTransitions[order.status] || [];
+        const isTerminalState = currentAllowed.length === 0;
+
+        // ドロップダウンの選択肢を生成（現在のステータス + 遷移可能なステータスのみ）
+        const statusOptions = [
+            { value: 'pending', label: '注文受付' },
+            { value: 'ready', label: '準備完了' },
+            { value: 'completed', label: '受取完了' },
+            { value: 'cancelled', label: 'キャンセル' }
+        ];
+
+        const optionsHtml = statusOptions.map(opt => {
+            const isCurrentStatus = opt.value === order.status;
+            const isAllowed = currentAllowed.includes(opt.value);
+            const shouldShow = isCurrentStatus || isAllowed;
+            
+            if (!shouldShow) return '';
+            
+            return `<option value="${opt.value}" ${isCurrentStatus ? 'selected' : ''}>${opt.label}</option>`;
+        }).join('');
+
         card.innerHTML = `
             <div class="order-card-header">
                 <div class="order-id">注文 #${order.id}</div>
@@ -497,57 +527,105 @@ class OrderManager {
             </div>
             <div class="order-card-footer">
                 <div class="status-update">
-                    <select class="status-select" data-order-id="${order.id}">
-                        <option value="pending" ${order.status === "pending" ? "selected" : ""}>注文受付</option>
-                        <option value="ready" ${order.status === "ready" ? "selected" : ""}>準備完了</option>
-                        <option value="completed" ${order.status === "completed" ? "selected" : ""}>受取完了</option>
-                        <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>キャンセル</option>
+                    <select class="status-select" data-order-id="${order.id}" ${isTerminalState ? 'disabled' : ''}>
+                        ${optionsHtml}
                     </select>
-                    <button class="btn btn-primary btn-sm update-status-btn" data-order-id="${order.id}">ステータス更新</button>
+                    <button class="btn btn-primary btn-sm update-status-btn" 
+                            data-order-id="${order.id}" 
+                            ${isTerminalState ? 'disabled' : ''}
+                            title="${isTerminalState ? 'このステータスは変更できません' : 'ステータスを更新'}">
+                        ステータス更新
+                    </button>
                 </div>
                 <button class="btn btn-secondary btn-sm detail-btn" data-order-id="${order.id}">詳細</button>
             </div>
         `;
-        card.querySelector(".update-status-btn").addEventListener("click", () => this.updateOrderStatus(order.id));
+        
+        if (!isTerminalState) {
+            card.querySelector(".update-status-btn").addEventListener("click", () => this.updateOrderStatus(order.id));
+        }
         card.querySelector(".detail-btn").addEventListener("click", () => this.showOrderDetail(order));
         return card;
     }
 
     async updateOrderStatus(orderId) {
-        try {
-            const selectElement = document.querySelector(`.status-select[data-order-id="${orderId}"]`);
-            const newStatus = selectElement.value;
-            const order = this.orders.find(o => o.id === orderId);
-            const currentStatus = order.status;
-            if (newStatus === currentStatus) {
-                this.showToast("info", "変更なし", "ステータスは変更されていません");
-                return;
-            }
-            if (newStatus === "cancelled" && !confirm("この注文をキャンセルしますか?")) {
+        const selectElement = document.querySelector(`.status-select[data-order-id="${orderId}"]`);
+        const newStatus = selectElement.value;
+        const order = this.orders.find(o => o.id === orderId);
+        const currentStatus = order.status;
+
+        // 変更がない場合は早期リターン
+        if (newStatus === currentStatus) {
+            this.showToast("info", "変更なし", "ステータスは変更されていません");
+            return;
+        }
+
+        // キャンセル時の確認ダイアログ
+        if (newStatus === "cancelled") {
+            const confirmed = confirm(
+                "⚠️ この注文をキャンセルしますか?\n\n" +
+                `注文 #${orderId}\n` +
+                `お客様: ${order.customer_name}\n` +
+                `メニュー: ${order.menu_name}\n\n` +
+                "キャンセル後は元に戻せません。"
+            );
+            if (!confirmed) {
                 selectElement.value = currentStatus;
                 return;
             }
+        }
+
+        try {
             const token = localStorage.getItem("authToken");
             const response = await fetch(`/api/store/orders/${orderId}/status`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "Authorization": `Bearer ${token}` 
+                },
                 body: JSON.stringify({ status: newStatus })
             });
-            if (!response.ok) throw new Error("ステータスの更新に失敗しました");
+
+            // エラーレスポンスの詳細処理
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorMessage = errorData.detail || "ステータスの更新に失敗しました";
+                throw new Error(errorMessage);
+            }
+
             const updatedOrder = await response.json();
+            
+            // 注文データを更新
             const index = this.orders.findIndex(o => o.id === orderId);
             if (index !== -1) {
                 this.orders[index] = this.normalizeOrder(updatedOrder);
             }
+
+            // UI更新
             this.displayOrders();
             this.updateCounts();
-            this.showToast("success", "更新成功", "ステータスを更新しました");
+            
+            // 成功メッセージ
+            const statusLabels = {
+                'pending': '注文受付',
+                'ready': '準備完了',
+                'completed': '受取完了',
+                'cancelled': 'キャンセル'
+            };
+            this.showToast(
+                "success", 
+                "更新成功", 
+                `ステータスを「${statusLabels[newStatus]}」に更新しました`
+            );
+
         } catch (error) {
             console.error("ステータス更新エラー:", error);
-            this.showToast("error", "エラー", error.message);
-            const selectElement = document.querySelector(`.status-select[data-order-id="${orderId}"]`);
-            const order = this.orders.find(o => o.id === orderId);
-            if (order) selectElement.value = order.status;
+            
+            // ロールバック: UIを元のステータスに戻す
+            selectElement.value = currentStatus;
+            
+            // エラーメッセージを表示
+            this.showToast("error", "更新エラー", error.message);
         }
     }
 

@@ -588,6 +588,13 @@
     cursor: pointer;
 }
 
+.status-select:disabled {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 .btn-update-status {
     padding: 0.5rem 1rem;
     background-color: #0066cc;
