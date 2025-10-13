@@ -50,5 +50,11 @@ logs/
 .DS_Store
 Thumbs.db
 
+# Testing & Development
+cookies.txt
+*.http
+.http
+Thumbs.db
+
 # Docker
 docker-compose.override.yml
