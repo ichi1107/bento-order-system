@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メニュー管理 - 弁当注文システム</title>
+    
+    <!-- パフォーマンス最適化: DNS Prefetch & Preconnect -->
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/store_menus.css">
+</head>
+<body>
+    <div class="container">
+        {% set active_page = 'menus' %}
+        {% include 'includes/store_header.html' %}
+
+        <main class="main">
+            <section class="page-header">
+                <div class="page-header-content">
+                    <div>
+                        <h2>🍱 メニュー管理</h2>
+                        <p>店舗のメニュー情報を管理</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" id="addMenuBtn">
+                            <span class="btn-icon">➕</span>
+                            メニュー追加
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ローディングインジケーター -->
+            <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                <div class="spinner"></div>
+                <p>データを読み込み中...</p>
+            </div>
+
+            <!-- エラーメッセージ表示エリア -->
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+            <!-- フィルタセクション -->
+            <section class="filter-section">
+                <div class="filter-group">
+                    <button class="filter-btn active" data-filter="all">
+                        すべて
+                        <span class="filter-count" id="countAll">0</span>
+                    </button>
+                    <button class="filter-btn" data-filter="true">
+                        🟢 公開中
+                        <span class="filter-count" id="countAvailable">0</span>
+                    </button>
+                    <button class="filter-btn" data-filter="false">
+                        🔴 非公開
+                        <span class="filter-count" id="countUnavailable">0</span>
+                    </button>
+                </div>
+                <div class="filter-info">
+                    <span id="filterInfo">全メニューを表示中</span>
+                </div>
+            </section>
+
+            <!-- メニュー一覧テーブル -->
+            <section class="table-section">
+                <div class="table-container">
+                    <table class="menu-table">
+                        <thead>
+                            <tr>
+                                <th width="50">ID</th>
+                                <th width="80">画像</th>
+                                <th>メニュー名</th>
+                                <th width="120">価格</th>
+                                <th width="100">ステータス</th>
+                                <th width="150">登録日</th>
+                                <th width="150">更新日</th>
+                                <th width="150">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="menuTableBody">
+                            <!-- JavaScriptで動的に生成 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- データがない場合のメッセージ -->
+                <div id="emptyMessage" class="empty-message" style="display: none;">
+                    <div class="empty-icon">📭</div>
+                    <h3>メニューがありません</h3>
+                    <p id="emptyMessageText">メニューを追加してください</p>
+                </div>
+            </section>
+
+            <!-- ページネーション -->
+            <section class="pagination-section" id="paginationSection" style="display: none;">
+                <div class="pagination-info">
+                    <span id="paginationInfo">1-20 / 100件</span>
+                </div>
+                <div class="pagination" id="pagination">
+                    <!-- JavaScriptで動的に生成 -->
+                </div>
+                <div class="pagination-controls">
+                    <label for="perPageSelect">表示件数:</label>
+                    <select id="perPageSelect" class="per-page-select">
+                        <option value="10">10件</option>
+                        <option value="20" selected>20件</option>
+                        <option value="50">50件</option>
+                        <option value="100">100件</option>
+                    </select>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast通知 -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- JavaScript -->
+    <script src="/static/js/common.js"></script>
+    <script src="/static/js/store_menus.js"></script>
+</body>
+</html>
