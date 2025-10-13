@@ -91,6 +91,7 @@ body {
     font-weight: 500;
     font-size: 0.9rem;
     white-space: nowrap;
+    position: relative; /* ãƒãƒƒã‚¸é…ç½®ã®ãŸã‚ */
 }
 
 .nav-link:hover {
@@ -714,7 +715,7 @@ body {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-/* ƒŒƒXƒ|ƒ“ƒVƒuƒfƒUƒCƒ“ */
+/* ï¿½ï¿½ï¿½Xï¿½|ï¿½ï¿½ï¿½Vï¿½uï¿½fï¿½Uï¿½Cï¿½ï¿½ */
 @media (max-width: 1200px) {
     .header-container { gap: 1rem; }
     .nav { gap: 0.3rem; }

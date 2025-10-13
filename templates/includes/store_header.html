@@ -7,7 +7,10 @@
         </div>
         <nav class="nav">
             <a href="/store/dashboard" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">📊 ダッシュボード</a>
-            <a href="/store/orders" class="nav-link {% if active_page == 'orders' %}active{% endif %}">📋 注文管理</a>
+            <a href="/store/orders" class="nav-link {% if active_page == 'orders' %}active{% endif %} notification-link">
+                📋 注文管理
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </a>
             <a href="/store/menus" class="nav-link {% if active_page == 'menus' %}active{% endif %}">🍱 メニュー管理</a>
             <a href="/store/reports" class="nav-link {% if active_page == 'reports' %}active{% endif %}">📈 レポート</a>
             <a href="/store/profile" class="nav-link {% if active_page == 'profile' %}active{% endif %}">⚙️ 店舗情報</a>
