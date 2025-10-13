@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '002_perf_indexes'
-down_revision = '82c749cdf529'
+down_revision = 'assign_store_ids'  # store_id割り当て後にインデックスを追加
 branch_labels = None
 depends_on = None
 

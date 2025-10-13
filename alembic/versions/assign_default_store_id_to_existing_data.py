@@ -17,7 +17,7 @@ from datetime import time as datetime_time
 
 # revision identifiers, used by Alembic.
 revision: str = 'assign_store_ids'
-down_revision: Union[str, None] = '47d59852aca6'
+down_revision: Union[str, None] = '82c749cdf529'  # initial_migration に変更
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -14,7 +14,45 @@ API契約定義 - Single Source of Truth
 from datetime import datetime, time
 from typing import Optional, List, Literal
 from pydantic import BaseModel, EmailStr, Field, field_validator
+from enum import Enum
 import re
+
+
+# ===== 注文ステータス定義 =====
+
+class OrderStatus(str, Enum):
+    """
+    注文ステータス（簡素化版）
+    
+    シンプルで直感的な4つのステータスで注文フローを管理:
+    - PENDING: 注文受付（確認・在庫確認・決済処理中）
+    - READY: 準備完了（弁当完成、顧客通知送信）
+    - COMPLETED: 受取完了（顧客が受取済み）
+    - CANCELLED: キャンセル（注文取消）
+    """
+    PENDING = "pending"      # 注文受付
+    READY = "ready"          # 準備完了
+    COMPLETED = "completed"  # 受取完了
+    CANCELLED = "cancelled"  # キャンセル
+    
+    @classmethod
+    def get_allowed_transitions(cls, current_status: str) -> List[str]:
+        """
+        許可されているステータス遷移を返す
+        
+        Args:
+            current_status: 現在のステータス
+            
+        Returns:
+            遷移可能なステータスのリスト
+        """
+        transitions = {
+            cls.PENDING.value: [cls.READY.value, cls.CANCELLED.value],
+            cls.READY.value: [cls.COMPLETED.value],
+            cls.COMPLETED.value: [],
+            cls.CANCELLED.value: []
+        }
+        return transitions.get(current_status, [])
 
 
 # ===== 共通型定義 =====
@@ -313,7 +351,18 @@ class OrderCreate(OrderBase):
 
 class OrderStatusUpdate(BaseModel):
     """注文ステータス更新時のリクエスト"""
-    status: str = Field(..., pattern="^(pending|confirmed|preparing|ready|completed|cancelled)$")
+    status: OrderStatus = Field(..., description="新しいステータス（pending, ready, completed, cancelled のみ）")
+    
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v):
+        """ステータスの妥当性を検証"""
+        if isinstance(v, str):
+            try:
+                return OrderStatus(v)
+            except ValueError:
+                raise ValueError(f"Invalid status. Must be one of: {[s.value for s in OrderStatus]}")
+        return v
 
 
 class OrderResponse(BaseModel):
@@ -399,15 +448,13 @@ class HourlyOrderData(BaseModel):
 
 
 class OrderSummary(BaseModel):
-    """注文サマリー（ダッシュボード用）"""
+    """注文サマリー（ダッシュボード用・簡素化版）"""
     # 基本統計
     total_orders: int
-    pending_orders: int
-    confirmed_orders: int
-    preparing_orders: int
-    ready_orders: int
-    completed_orders: int
-    cancelled_orders: int
+    pending_orders: int      # 注文受付中
+    ready_orders: int        # 準備完了
+    completed_orders: int    # 受取完了
+    cancelled_orders: int    # キャンセル
     total_sales: int
     
     # 拡張統計
